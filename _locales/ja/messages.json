@@ -1,0 +1,160 @@
+{
+  "extName": {
+    "message": "フルページスクリーンショット",
+    "description": "Extension name"
+  },
+  "extDescription": {
+    "message": "Webページ全体のスクリーンショットを撮影・編集できる拡張機能",
+    "description": "Extension description"
+  },
+  "cmdCaptureFullPage": {
+    "message": "ページ全体をキャプチャ",
+    "description": "Command to capture full page"
+  },
+  "cmdCaptureSelection": {
+    "message": "範囲を選択してキャプチャ",
+    "description": "Command to capture selection"
+  },
+  "popupTitle": {
+    "message": "スクリーンショット",
+    "description": "Popup title"
+  },
+  "btnCaptureFullPage": {
+    "message": "ページ全体をキャプチャ",
+    "description": "Button to capture full page"
+  },
+  "btnCaptureSelection": {
+    "message": "範囲を選択してキャプチャ",
+    "description": "Button to capture selection"
+  },
+  "btnCaptureDelay": {
+    "message": "後にキャプチャ",
+    "description": "Button for delayed capture"
+  },
+  "labelFormat": {
+    "message": "形式",
+    "description": "Label for format selection"
+  },
+  "labelSave": {
+    "message": "保存",
+    "description": "Label for save section"
+  },
+  "btnDownload": {
+    "message": "保存",
+    "description": "Download button"
+  },
+  "btnCopy": {
+    "message": "コピー",
+    "description": "Copy to clipboard button"
+  },
+  "delaySeconds": {
+    "message": "$COUNT$秒",
+    "description": "Delay in seconds",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "delayModeVisible": {
+    "message": "表示領域",
+    "description": "Capture visible area only"
+  },
+  "delayModeFullPage": {
+    "message": "フルページ",
+    "description": "Capture full page"
+  },
+  "contextMenuFullPage": {
+    "message": "ページ全体をキャプチャ",
+    "description": "Context menu item for full page capture"
+  },
+  "contextMenuSelection": {
+    "message": "範囲を選択してキャプチャ",
+    "description": "Context menu item for selection capture"
+  },
+  "editorTitle": {
+    "message": "スクリーンショット編集",
+    "description": "Editor page title"
+  },
+  "toolArrow": {
+    "message": "矢印",
+    "description": "Arrow tool"
+  },
+  "toolRect": {
+    "message": "四角形",
+    "description": "Rectangle tool"
+  },
+  "toolCircle": {
+    "message": "円",
+    "description": "Circle tool"
+  },
+  "toolText": {
+    "message": "テキスト",
+    "description": "Text tool"
+  },
+  "toolMarker": {
+    "message": "マーカー",
+    "description": "Marker/highlighter tool"
+  },
+  "btnCancel": {
+    "message": "キャンセル",
+    "description": "Cancel button"
+  },
+  "optionsTitle": {
+    "message": "設定",
+    "description": "Options page title"
+  },
+  "optDefaultFormat": {
+    "message": "デフォルト出力形式",
+    "description": "Default output format setting"
+  },
+  "optJpegQuality": {
+    "message": "JPEG品質",
+    "description": "JPEG quality setting"
+  },
+  "optDefaultSaveMethod": {
+    "message": "デフォルト保存方法",
+    "description": "Default save method setting"
+  },
+  "optFilePrefix": {
+    "message": "ファイル名プレフィックス",
+    "description": "Filename prefix setting"
+  },
+  "optShortcuts": {
+    "message": "ショートカットキー",
+    "description": "Keyboard shortcuts section"
+  },
+  "optOpenShortcuts": {
+    "message": "ショートカット設定を開く",
+    "description": "Link to open Chrome shortcuts settings"
+  },
+  "btnSaveSettings": {
+    "message": "設定を保存",
+    "description": "Save settings button"
+  },
+  "msgSettingsSaved": {
+    "message": "設定を保存しました",
+    "description": "Settings saved message"
+  },
+  "msgCapturing": {
+    "message": "キャプチャ中...",
+    "description": "Capturing in progress message"
+  },
+  "msgCaptureComplete": {
+    "message": "キャプチャ完了",
+    "description": "Capture complete message"
+  },
+  "msgCopied": {
+    "message": "クリップボードにコピーしました",
+    "description": "Copied to clipboard message"
+  },
+  "msgDownloaded": {
+    "message": "ダウンロードしました",
+    "description": "Downloaded message"
+  },
+  "msgSelectArea": {
+    "message": "キャプチャする範囲をドラッグして選択してください",
+    "description": "Instruction to select capture area"
+  }
+}

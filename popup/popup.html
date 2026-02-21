@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="popup.css">
+  <title data-i18n="popupTitle">Screenshot</title>
+</head>
+<body>
+  <div class="popup-container">
+    <header class="popup-header">
+      <h1 data-i18n="popupTitle">Screenshot</h1>
+    </header>
+
+    <main class="popup-main">
+      <!-- Capture Mode Buttons -->
+      <section class="capture-modes">
+        <button id="btn-full-page" class="capture-btn primary">
+          <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="3" y1="9" x2="21" y2="9"></line>
+            <line x1="3" y1="15" x2="21" y2="15"></line>
+          </svg>
+          <span data-i18n="btnCaptureFullPage">ページ全体をキャプチャ</span>
+        </button>
+        <button id="btn-selection" class="capture-btn secondary">
+          <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 3v4M3 5h4M5 21v-4M3 19h4M19 3v4M21 5h-4M19 21v-4M21 19h-4"></path>
+            <rect x="7" y="7" width="10" height="10" rx="1"></rect>
+          </svg>
+          <span data-i18n="btnCaptureSelection">範囲を選択してキャプチャ</span>
+        </button>
+        <div class="delay-capture">
+          <div class="delay-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+          <select id="delay-seconds" class="delay-select delay-select-time">
+            <option value="3">3秒</option>
+            <option value="5">5秒</option>
+            <option value="10">10秒</option>
+          </select>
+          <select id="delay-mode" class="delay-select delay-select-mode">
+            <option value="visible" data-i18n-value="delayModeVisible">表示領域</option>
+            <option value="fullPage" data-i18n-value="delayModeFullPage">フルページ</option>
+          </select>
+          <button id="btn-delay" class="capture-btn secondary" data-i18n="btnCaptureDelay">
+            後にキャプチャ
+          </button>
+        </div>
+      </section>
+
+      <!-- Output Format -->
+      <section class="format-section">
+        <label class="section-label" data-i18n="labelFormat">Format</label>
+        <div class="format-options">
+          <label class="format-option">
+            <input type="radio" name="format" value="png" checked>
+            <span>PNG</span>
+          </label>
+          <label class="format-option">
+            <input type="radio" name="format" value="jpeg">
+            <span>JPEG</span>
+          </label>
+          <label class="format-option">
+            <input type="radio" name="format" value="pdf">
+            <span>PDF</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Save Options -->
+      <section class="save-section">
+        <label class="section-label" data-i18n="labelSave">Save</label>
+        <div class="save-options">
+          <label class="save-option">
+            <input type="checkbox" id="save-download" checked>
+            <span data-i18n="btnDownload">Save</span>
+          </label>
+          <label class="save-option">
+            <input type="checkbox" id="save-clipboard">
+            <span data-i18n="btnCopy">Copy</span>
+          </label>
+        </div>
+      </section>
+    </main>
+
+    <!-- Status Message -->
+    <div id="status-message" class="status-message hidden"></div>
+
+    <!-- Settings Link -->
+    <footer class="popup-footer">
+      <a href="#" id="open-settings" class="settings-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </a>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

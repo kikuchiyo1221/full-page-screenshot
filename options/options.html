@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="options.css">
+  <title data-i18n="optionsTitle">Settings</title>
+</head>
+<body>
+  <div class="options-container">
+    <header class="options-header">
+      <h1 data-i18n="optionsTitle">Settings</h1>
+    </header>
+
+    <main class="options-main">
+      <!-- Default Format -->
+      <section class="option-section">
+        <label class="option-label" data-i18n="optDefaultFormat">Default Output Format</label>
+        <select id="default-format" class="option-select">
+          <option value="png">PNG</option>
+          <option value="jpeg">JPEG</option>
+          <option value="pdf">PDF</option>
+        </select>
+      </section>
+
+      <!-- JPEG Quality -->
+      <section class="option-section">
+        <label class="option-label" data-i18n="optJpegQuality">JPEG Quality</label>
+        <div class="option-row">
+          <input type="range" id="jpeg-quality" min="1" max="100" value="92" class="option-slider">
+          <span id="jpeg-quality-value" class="option-value">92%</span>
+        </div>
+      </section>
+
+      <!-- Default Save Method -->
+      <section class="option-section">
+        <label class="option-label" data-i18n="optDefaultSaveMethod">Default Save Method</label>
+        <div class="checkbox-group">
+          <label class="checkbox-option">
+            <input type="checkbox" id="save-download" checked>
+            <span data-i18n="btnDownload">Download</span>
+          </label>
+          <label class="checkbox-option">
+            <input type="checkbox" id="save-clipboard">
+            <span data-i18n="btnCopy">Copy to Clipboard</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- File Prefix -->
+      <section class="option-section">
+        <label class="option-label" data-i18n="optFilePrefix">Filename Prefix</label>
+        <input type="text" id="file-prefix" value="screenshot" class="option-input" placeholder="screenshot">
+        <p class="option-hint">Example: <code id="filename-preview">screenshot_20260221_120000.png</code></p>
+      </section>
+
+      <!-- Keyboard Shortcuts -->
+      <section class="option-section">
+        <label class="option-label" data-i18n="optShortcuts">Keyboard Shortcuts</label>
+        <div class="shortcuts-info">
+          <div class="shortcut-row">
+            <span class="shortcut-name" data-i18n="btnCaptureFullPage">Capture Full Page</span>
+            <kbd>Alt + Shift + S</kbd>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-name" data-i18n="btnCaptureSelection">Capture Selection</span>
+            <kbd>Alt + Shift + A</kbd>
+          </div>
+        </div>
+        <a href="#" id="open-shortcuts" class="option-link" data-i18n="optOpenShortcuts">
+          Open Shortcut Settings
+        </a>
+      </section>
+
+      <!-- Save Button -->
+      <section class="option-actions">
+        <button id="btn-save" class="save-btn" data-i18n="btnSaveSettings">
+          Save Settings
+        </button>
+        <span id="save-status" class="save-status hidden"></span>
+      </section>
+    </main>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

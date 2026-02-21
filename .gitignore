@@ -1,0 +1,15 @@
+# Build output
+screenshot-extension.zip
+build/
+
+# macOS
+.DS_Store
+*.DS_Store
+
+# Editor
+*.swp
+*.swo
+*~
+
+# Development
+*.log

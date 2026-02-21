@@ -1,0 +1,160 @@
+{
+  "extName": {
+    "message": "Full Page Screenshot",
+    "description": "Extension name"
+  },
+  "extDescription": {
+    "message": "Capture and edit full page screenshots of any webpage",
+    "description": "Extension description"
+  },
+  "cmdCaptureFullPage": {
+    "message": "Capture Full Page",
+    "description": "Command to capture full page"
+  },
+  "cmdCaptureSelection": {
+    "message": "Capture Selection",
+    "description": "Command to capture selection"
+  },
+  "popupTitle": {
+    "message": "Screenshot",
+    "description": "Popup title"
+  },
+  "btnCaptureFullPage": {
+    "message": "Capture Full Page",
+    "description": "Button to capture full page"
+  },
+  "btnCaptureSelection": {
+    "message": "Capture Selection",
+    "description": "Button to capture selection"
+  },
+  "btnCaptureDelay": {
+    "message": "then Capture",
+    "description": "Button for delayed capture"
+  },
+  "labelFormat": {
+    "message": "Format",
+    "description": "Label for format selection"
+  },
+  "labelSave": {
+    "message": "Save",
+    "description": "Label for save section"
+  },
+  "btnDownload": {
+    "message": "Save",
+    "description": "Download button"
+  },
+  "btnCopy": {
+    "message": "Copy",
+    "description": "Copy to clipboard button"
+  },
+  "delaySeconds": {
+    "message": "$COUNT$s",
+    "description": "Delay in seconds",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "delayModeVisible": {
+    "message": "Visible",
+    "description": "Capture visible area only"
+  },
+  "delayModeFullPage": {
+    "message": "Full Page",
+    "description": "Capture full page"
+  },
+  "contextMenuFullPage": {
+    "message": "Capture Full Page",
+    "description": "Context menu item for full page capture"
+  },
+  "contextMenuSelection": {
+    "message": "Capture Selection",
+    "description": "Context menu item for selection capture"
+  },
+  "editorTitle": {
+    "message": "Edit Screenshot",
+    "description": "Editor page title"
+  },
+  "toolArrow": {
+    "message": "Arrow",
+    "description": "Arrow tool"
+  },
+  "toolRect": {
+    "message": "Rectangle",
+    "description": "Rectangle tool"
+  },
+  "toolCircle": {
+    "message": "Circle",
+    "description": "Circle tool"
+  },
+  "toolText": {
+    "message": "Text",
+    "description": "Text tool"
+  },
+  "toolMarker": {
+    "message": "Marker",
+    "description": "Marker/highlighter tool"
+  },
+  "btnCancel": {
+    "message": "Cancel",
+    "description": "Cancel button"
+  },
+  "optionsTitle": {
+    "message": "Settings",
+    "description": "Options page title"
+  },
+  "optDefaultFormat": {
+    "message": "Default Output Format",
+    "description": "Default output format setting"
+  },
+  "optJpegQuality": {
+    "message": "JPEG Quality",
+    "description": "JPEG quality setting"
+  },
+  "optDefaultSaveMethod": {
+    "message": "Default Save Method",
+    "description": "Default save method setting"
+  },
+  "optFilePrefix": {
+    "message": "Filename Prefix",
+    "description": "Filename prefix setting"
+  },
+  "optShortcuts": {
+    "message": "Keyboard Shortcuts",
+    "description": "Keyboard shortcuts section"
+  },
+  "optOpenShortcuts": {
+    "message": "Open Shortcut Settings",
+    "description": "Link to open Chrome shortcuts settings"
+  },
+  "btnSaveSettings": {
+    "message": "Save Settings",
+    "description": "Save settings button"
+  },
+  "msgSettingsSaved": {
+    "message": "Settings saved",
+    "description": "Settings saved message"
+  },
+  "msgCapturing": {
+    "message": "Capturing...",
+    "description": "Capturing in progress message"
+  },
+  "msgCaptureComplete": {
+    "message": "Capture complete",
+    "description": "Capture complete message"
+  },
+  "msgCopied": {
+    "message": "Copied to clipboard",
+    "description": "Copied to clipboard message"
+  },
+  "msgDownloaded": {
+    "message": "Downloaded",
+    "description": "Downloaded message"
+  },
+  "msgSelectArea": {
+    "message": "Drag to select the area to capture",
+    "description": "Instruction to select capture area"
+  }
+}
