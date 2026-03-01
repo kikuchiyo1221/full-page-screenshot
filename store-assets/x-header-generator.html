@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>X Header Image Generator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      min-height: 100vh;
+      padding: 40px;
+    }
+
+    h1 {
+      color: white;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .instructions {
+      color: #aaa;
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    .section {
+      margin-bottom: 60px;
+    }
+
+    .section-title {
+      color: #3b82f6;
+      font-size: 20px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .section-desc {
+      color: #888;
+      font-size: 14px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .download-btn {
+      display: block;
+      margin: 0 auto 20px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .download-btn:hover {
+      background: #2563eb;
+    }
+
+    .download-btn:disabled {
+      background: #6b7280;
+      cursor: wait;
+    }
+
+    .asset-container {
+      display: flex;
+      justify-content: center;
+      overflow-x: auto;
+    }
+
+    .size-info {
+      color: #666;
+      font-size: 13px;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    /* Header Base */
+    .x-header {
+      width: 1500px;
+      height: 500px;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    /* Photo-based headers */
+    .header-photo {
+      background-size: cover;
+      background-position: center;
+    }
+
+    .photo-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
+
+    .photo-content {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      padding: 0 100px;
+    }
+
+    .photo-text {
+      color: white;
+    }
+
+    .photo-label {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      opacity: 0.7;
+      margin-bottom: 12px;
+    }
+
+    .photo-name {
+      font-size: 80px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .photo-tagline {
+      font-size: 24px;
+      opacity: 0.9;
+      margin-bottom: 24px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+
+    .photo-skills {
+      display: flex;
+      gap: 12px;
+    }
+
+    .photo-skill {
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(10px);
+      padding: 10px 20px;
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    /* Design 1: Tech Gradient */
+    .header-tech {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 40%, #3b82f6 100%);
+    }
+
+    .header-tech::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background:
+        radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 30%, rgba(139, 92, 246, 0.2) 0%, transparent 40%);
+    }
+
+    .tech-grid {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+
+    .tech-content {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 60px;
+      padding: 0 100px;
+    }
+
+    .tech-icon {
+      width: 140px;
+      height: 140px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-radius: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 20px 60px rgba(59, 130, 246, 0.4);
+      flex-shrink: 0;
+    }
+
+    .tech-icon svg {
+      width: 70px;
+      height: 70px;
+    }
+
+    .tech-text {
+      color: white;
+    }
+
+    .tech-title {
+      font-size: 64px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .tech-subtitle {
+      font-size: 24px;
+      opacity: 0.8;
+    }
+
+    /* Design 2: Minimal Dark */
+    .header-minimal {
+      background: #0a0a0a;
+    }
+
+    .minimal-pattern {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background:
+        radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 30%),
+        radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 30%);
+    }
+
+    .minimal-content {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .minimal-badge {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 12px 24px;
+      border-radius: 100px;
+    }
+
+    .minimal-badge-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #3b82f6, #10b981);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .minimal-badge-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .minimal-badge-text {
+      color: rgba(255,255,255,0.7);
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .minimal-title {
+      color: white;
+      font-size: 72px;
+      font-weight: 800;
+      letter-spacing: -2px;
+    }
+
+    .minimal-tags {
+      display: flex;
+      gap: 12px;
+    }
+
+    .minimal-tag {
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.6);
+      padding: 8px 20px;
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    /* Design 3: Gradient Wave */
+    .header-wave {
+      background: linear-gradient(180deg, #1e1b4b 0%, #312e81 100%);
+    }
+
+    .wave-bg {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 200px;
+      background: linear-gradient(180deg, transparent 0%, rgba(99, 102, 241, 0.2) 100%);
+    }
+
+    .wave-circles {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .wave-circle {
+      position: absolute;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .wave-circle:nth-child(1) { width: 300px; height: 300px; }
+    .wave-circle:nth-child(2) { width: 500px; height: 500px; }
+    .wave-circle:nth-child(3) { width: 700px; height: 700px; }
+
+    .wave-content {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 120px;
+    }
+
+    .wave-left {
+      color: white;
+    }
+
+    .wave-label {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      opacity: 0.6;
+      margin-bottom: 16px;
+    }
+
+    .wave-title {
+      font-size: 56px;
+      font-weight: 800;
+      margin-bottom: 20px;
+    }
+
+    .wave-features {
+      display: flex;
+      gap: 24px;
+    }
+
+    .wave-feature {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
+      opacity: 0.8;
+    }
+
+    .wave-feature svg {
+      width: 20px;
+      height: 20px;
+      color: #a5b4fc;
+    }
+
+    .wave-right {
+      display: flex;
+      gap: 20px;
+    }
+
+    .wave-card {
+      width: 160px;
+      height: 200px;
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: white;
+    }
+
+    .wave-card-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .wave-card-icon svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .wave-card-text {
+      font-size: 14px;
+      font-weight: 500;
+      text-align: center;
+    }
+
+    /* Design 4: Clean Clover */
+    .header-clover {
+      background: linear-gradient(135deg, #065f46 0%, #047857 50%, #10b981 100%);
+    }
+
+    .clover-pattern {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      opacity: 0.1;
+      background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    .clover-glow {
+      position: absolute;
+      top: 50%;
+      left: 30%;
+      transform: translate(-50%, -50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(52, 211, 153, 0.3) 0%, transparent 60%);
+    }
+
+    .clover-content {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      padding: 0 120px;
+      gap: 80px;
+    }
+
+    .clover-icon-wrap {
+      position: relative;
+    }
+
+    .clover-icon-bg {
+      width: 180px;
+      height: 180px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
+    }
+
+    .clover-emoji {
+      font-size: 100px;
+    }
+
+    .clover-text {
+      color: white;
+    }
+
+    .clover-name {
+      font-size: 80px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      text-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+
+    .clover-tagline {
+      font-size: 24px;
+      opacity: 0.9;
+      margin-bottom: 24px;
+    }
+
+    .clover-skills {
+      display: flex;
+      gap: 12px;
+    }
+
+    .clover-skill {
+      background: rgba(255,255,255,0.2);
+      padding: 10px 20px;
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <h1>X Header Image Generator</h1>
+  <p class="instructions">好きなデザインを選んでダウンロード（1500 x 500 px）</p>
+
+  <!-- Design 0: Bangkok Skyline -->
+  <div class="section">
+    <h2 class="section-title">0. Bangkok Night</h2>
+    <p class="section-desc">バンコクの夜景</p>
+    <button class="download-btn" onclick="downloadHeader('header-0', 'x-header-bangkok.png')">
+      ダウンロード
+    </button>
+    <div class="asset-container">
+      <div class="x-header header-photo" id="header-0" style="background-image: url('https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=1500&h=500&fit=crop&crop=center');">
+        <div class="photo-overlay" style="background: linear-gradient(90deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.1) 100%);"></div>
+        <div class="photo-content">
+          <div class="photo-text">
+            <div class="photo-name">kiku</div>
+            <div class="photo-tagline">Developer in Bangkok 🇹🇭</div>
+            <div class="photo-skills">
+              <span class="photo-skill">Chrome Extensions</span>
+              <span class="photo-skill">Web Dev</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="size-info">1500 x 500 px</p>
+  </div>
+
+  <!-- Design 0-2: Temple -->
+  <div class="section">
+    <h2 class="section-title">0-2. Thai Temple</h2>
+    <p class="section-desc">ワットアルン風の寺院</p>
+    <button class="download-btn" onclick="downloadHeader('header-0-2', 'x-header-temple.png')">
+      ダウンロード
+    </button>
+    <div class="asset-container">
+      <div class="x-header header-photo" id="header-0-2" style="background-image: url('https://images.unsplash.com/photo-1528181304800-259b08848526?w=1500&h=500&fit=crop&crop=center');">
+        <div class="photo-overlay" style="background: linear-gradient(90deg, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.5) 40%, transparent 100%);"></div>
+        <div class="photo-content">
+          <div class="photo-text">
+            <div class="photo-name">kiku</div>
+            <div class="photo-tagline">Building tools that matter</div>
+            <div class="photo-skills">
+              <span class="photo-skill">🍀 Lucky Coder</span>
+              <span class="photo-skill">Open Source</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="size-info">1500 x 500 px</p>
+  </div>
+
+  <!-- Design 0-3: Beach -->
+  <div class="section">
+    <h2 class="section-title">0-3. Thai Beach</h2>
+    <p class="section-desc">タイのビーチ</p>
+    <button class="download-btn" onclick="downloadHeader('header-0-3', 'x-header-beach.png')">
+      ダウンロード
+    </button>
+    <div class="asset-container">
+      <div class="x-header header-photo" id="header-0-3" style="background-image: url('https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=1500&h=500&fit=crop&crop=center');">
+        <div class="photo-overlay" style="background: linear-gradient(90deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.4) 50%, transparent 100%);"></div>
+        <div class="photo-content">
+          <div class="photo-text">
+            <div class="photo-name" style="text-shadow: 0 4px 30px rgba(0,0,0,0.5);">kiku</div>
+            <div class="photo-tagline">Developer & Creator</div>
+            <div class="photo-skills">
+              <span class="photo-skill" style="background: rgba(255,255,255,0.25);">Thailand Based</span>
+              <span class="photo-skill" style="background: rgba(255,255,255,0.25);">Web Dev</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="size-info">1500 x 500 px</p>
+  </div>
+
+  <!-- Design 0-4: Street -->
+  <div class="section">
+    <h2 class="section-title">0-4. Bangkok Street</h2>
+    <p class="section-desc">バンコクのストリート</p>
+    <button class="download-btn" onclick="downloadHeader('header-0-4', 'x-header-street.png')">
+      ダウンロード
+    </button>
+    <div class="asset-container">
+      <div class="x-header header-photo" id="header-0-4" style="background-image: url('https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=1500&h=500&fit=crop&crop=center');">
+        <div class="photo-overlay" style="background: linear-gradient(90deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0.2) 100%);"></div>
+        <div class="photo-content">
+          <div class="photo-text">
+            <div class="photo-label">DEVELOPER</div>
+            <div class="photo-name">kiku</div>
+            <div class="photo-tagline">🍀 Making the web better, one extension at a time</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="size-info">1500 x 500 px</p>
+  </div>
+
+  <!-- Design 1: Tech Gradient -->
+  <div class="section">
+    <h2 class="section-title">1. Tech Gradient</h2>
+    <p class="section-desc">開発者・テック系向け</p>
+    <button class="download-btn" onclick="downloadHeader('header-1', 'x-header-tech.png')">
+      ダウンロード
+    </button>
+    <div class="asset-container">
+      <div class="x-header header-tech" id="header-1">
+        <div class="tech-grid"></div>
+        <div class="tech-content">
+          <div class="tech-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+          </div>
+          <div class="tech-text">
+            <div class="tech-title">kiku</div>
+            <div class="tech-subtitle">Building tools that matter</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="size-info">1500 x 500 px</p>
+  </div>
+
+  <!-- Design 2: Minimal Dark -->
+  <div class="section">
+    <h2 class="section-title">2. Minimal Dark</h2>
+    <p class="section-desc">シンプル・モダン</p>
+    <button class="download-btn" onclick="downloadHeader('header-2', 'x-header-minimal.png')">
+      ダウンロード
+    </button>
+    <div class="asset-container">
+      <div class="x-header header-minimal" id="header-2">
+        <div class="minimal-pattern"></div>
+        <div class="minimal-content">
+          <div class="minimal-badge">
+            <div class="minimal-badge-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                <polyline points="16 18 22 12 16 6"></polyline>
+                <polyline points="8 6 2 12 8 18"></polyline>
+              </svg>
+            </div>
+            <span class="minimal-badge-text">Developer & Creator</span>
+          </div>
+          <div class="minimal-title">kiku</div>
+          <div class="minimal-tags">
+            <span class="minimal-tag">Chrome Extensions</span>
+            <span class="minimal-tag">Web Development</span>
+            <span class="minimal-tag">Open Source</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="size-info">1500 x 500 px</p>
+  </div>
+
+  <!-- Design 3: Gradient Wave -->
+  <div class="section">
+    <h2 class="section-title">3. Gradient Wave</h2>
+    <p class="section-desc">プロダクト紹介向け</p>
+    <button class="download-btn" onclick="downloadHeader('header-3', 'x-header-wave.png')">
+      ダウンロード
+    </button>
+    <div class="asset-container">
+      <div class="x-header header-wave" id="header-3">
+        <div class="wave-bg"></div>
+        <div class="wave-circles">
+          <div class="wave-circle"></div>
+          <div class="wave-circle"></div>
+          <div class="wave-circle"></div>
+        </div>
+        <div class="wave-content">
+          <div class="wave-left">
+            <div class="wave-label">Chrome Extension</div>
+            <div class="wave-title">Full Page<br>Screenshot</div>
+            <div class="wave-features">
+              <div class="wave-feature">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Full Page
+              </div>
+              <div class="wave-feature">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Delayed Capture
+              </div>
+              <div class="wave-feature">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Built-in Editor
+              </div>
+            </div>
+          </div>
+          <div class="wave-right">
+            <div class="wave-card">
+              <div class="wave-card-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+              </div>
+              <div class="wave-card-text">Capture<br>Anything</div>
+            </div>
+            <div class="wave-card">
+              <div class="wave-card-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 20h9"></path>
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                </svg>
+              </div>
+              <div class="wave-card-text">Edit<br>Instantly</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="size-info">1500 x 500 px</p>
+  </div>
+
+  <!-- Design 4: Clean Clover -->
+  <div class="section">
+    <h2 class="section-title">4. Clean Clover</h2>
+    <p class="section-desc">アイコンに合わせたグリーン系</p>
+    <button class="download-btn" onclick="downloadHeader('header-4', 'x-header-clover.png')">
+      ダウンロード
+    </button>
+    <div class="asset-container">
+      <div class="x-header header-clover" id="header-4">
+        <div class="clover-pattern"></div>
+        <div class="clover-glow"></div>
+        <div class="clover-content">
+          <div class="clover-icon-wrap">
+            <div class="clover-icon-bg">
+              <span class="clover-emoji">🍀</span>
+            </div>
+          </div>
+          <div class="clover-text">
+            <div class="clover-name">kiku</div>
+            <div class="clover-tagline">Developer & Creator</div>
+            <div class="clover-skills">
+              <span class="clover-skill">Chrome Extensions</span>
+              <span class="clover-skill">Web Dev</span>
+              <span class="clover-skill">OSS</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="size-info">1500 x 500 px</p>
+  </div>
+
+  <script>
+    async function downloadHeader(elementId, filename) {
+      const btn = event.target;
+      btn.disabled = true;
+      btn.textContent = '生成中...';
+
+      try {
+        const element = document.getElementById(elementId);
+        const canvas = await html2canvas(element, {
+          width: 1500,
+          height: 500,
+          scale: 1,
+          useCORS: true,
+          backgroundColor: null
+        });
+
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+
+        btn.textContent = 'ダウンロード完了!';
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = 'ダウンロード';
+        }, 2000);
+      } catch (error) {
+        console.error('Error:', error);
+        btn.disabled = false;
+        btn.textContent = 'エラー - もう一度試してください';
+      }
+    }
+  </script>
+</body>
+</html>

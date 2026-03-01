@@ -6,7 +6,7 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.3);
+  background: transparent;
   z-index: 2147483647;
   cursor: crosshair;
 }
@@ -32,6 +32,10 @@
   margin-top: 8px;
   font-size: 13px;
   opacity: 0.7;
+}
+
+.screenshot-selection-instructions.hidden {
+  display: none !important;
 }
 
 .screenshot-selection-box {

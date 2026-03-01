@@ -480,8 +480,7 @@ class ScreenshotEditor {
     this.saveHistory();
   }
 
-  getFinalImage(format = 'png', quality = 0.92) {
-    // Create output canvas
+  createFinalCanvas() {
     const outputCanvas = document.createElement('canvas');
     outputCanvas.width = this.backgroundCanvas.width;
     outputCanvas.height = this.backgroundCanvas.height;
@@ -493,19 +492,44 @@ class ScreenshotEditor {
     // Draw annotations
     outputCtx.drawImage(this.drawingCanvas, 0, 0);
 
+    return outputCanvas;
+  }
+
+  getFinalImage(format = 'png', quality = 0.92) {
+    const outputCanvas = this.createFinalCanvas();
+
     // Convert to data URL
     const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
     return outputCanvas.toDataURL(mimeType, quality);
   }
 
+  async getFinalPdfDataUrl(quality = 0.92) {
+    const outputCanvas = this.createFinalCanvas();
+    const jpegBlob = await new Promise((resolve, reject) => {
+      outputCanvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error('Failed to create PDF image blob'));
+          return;
+        }
+        resolve(blob);
+      }, 'image/jpeg', quality);
+    });
+
+    return createPdfDataUrlFromJpegBlob(jpegBlob, outputCanvas.width, outputCanvas.height);
+  }
+
   async save() {
     const format = document.getElementById('format-select').value;
-    const imageData = this.getFinalImage(format);
 
     const settings = await chrome.storage.sync.get({
       filePrefix: 'screenshot',
       jpegQuality: 92
     });
+
+    const jpegQuality = Math.min(100, Math.max(1, Number(settings.jpegQuality) || 92)) / 100;
+    const imageData = format === 'pdf'
+      ? await this.getFinalPdfDataUrl(jpegQuality)
+      : this.getFinalImage(format, jpegQuality);
 
     // Generate filename
     const timestamp = new Date().toISOString()
@@ -515,14 +539,25 @@ class ScreenshotEditor {
     const extension = format === 'jpeg' ? 'jpg' : format;
     const filename = `${settings.filePrefix}_${timestamp}.${extension}`;
 
-    // Create download
-    const link = document.createElement('a');
-    link.download = filename;
-    link.href = imageData;
-    link.click();
+    // Convert data URL to blob for reliable download (data URLs can be blocked by Chrome)
+    const response = await fetch(imageData);
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
 
-    // Show success message
-    this.showNotification(chrome.i18n.getMessage('msgDownloaded') || 'Downloaded');
+    try {
+      await chrome.downloads.download({
+        url: blobUrl,
+        filename,
+        saveAs: false
+      });
+      this.showNotification(chrome.i18n.getMessage('msgDownloaded') || 'Downloaded');
+    } catch (error) {
+      console.error('Download failed:', error);
+      this.showNotification('Download failed', 'error');
+    } finally {
+      // Clean up blob URL after a delay to ensure download starts
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+    }
   }
 
   async copyToClipboard() {
@@ -598,3 +633,100 @@ class ScreenshotEditor {
 document.addEventListener('DOMContentLoaded', () => {
   new ScreenshotEditor();
 });
+
+async function createPdfDataUrlFromJpegBlob(jpegBlob, widthPx, heightPx) {
+  const jpegBytes = new Uint8Array(await jpegBlob.arrayBuffer());
+  const pdfBytes = buildPdfFromJpegBytes(jpegBytes, widthPx, heightPx);
+  return `data:application/pdf;base64,${bytesToBase64(pdfBytes)}`;
+}
+
+function buildPdfFromJpegBytes(jpegBytes, widthPx, heightPx) {
+  const encoder = new TextEncoder();
+  const parts = [];
+  const offsets = [0];
+  let totalLength = 0;
+  const objectCount = 5;
+
+  const pushBytes = (bytes) => {
+    parts.push(bytes);
+    totalLength += bytes.length;
+  };
+
+  const pushText = (text) => {
+    pushBytes(encoder.encode(text));
+  };
+
+  const widthPt = Math.max(1, Math.round(widthPx * 72 / 96));
+  const heightPt = Math.max(1, Math.round(heightPx * 72 / 96));
+  const contentStream = `q\n${widthPt} 0 0 ${heightPt} 0 0 cm\n/Im0 Do\nQ\n`;
+  const contentBytes = encoder.encode(contentStream);
+
+  pushText('%PDF-1.4\n%\xFF\xFF\xFF\xFF\n');
+
+  const startObject = (id) => {
+    offsets[id] = totalLength;
+    pushText(`${id} 0 obj\n`);
+  };
+
+  const endObject = () => {
+    pushText('\nendobj\n');
+  };
+
+  startObject(1);
+  pushText('<< /Type /Catalog /Pages 2 0 R >>');
+  endObject();
+
+  startObject(2);
+  pushText('<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  endObject();
+
+  startObject(3);
+  pushText(
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${widthPt} ${heightPt}] ` +
+    '/Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>'
+  );
+  endObject();
+
+  startObject(4);
+  pushText(
+    `<< /Type /XObject /Subtype /Image /Width ${widthPx} /Height ${heightPx} ` +
+    '/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode ' +
+    `/Length ${jpegBytes.length} >>\nstream\n`
+  );
+  pushBytes(jpegBytes);
+  pushText('\nendstream');
+  endObject();
+
+  startObject(5);
+  pushText(`<< /Length ${contentBytes.length} >>\nstream\n`);
+  pushBytes(contentBytes);
+  pushText('endstream');
+  endObject();
+
+  const xrefOffset = totalLength;
+  pushText(`xref\n0 ${objectCount + 1}\n`);
+  pushText('0000000000 65535 f \n');
+  for (let i = 1; i <= objectCount; i += 1) {
+    pushText(`${String(offsets[i]).padStart(10, '0')} 00000 n \n`);
+  }
+  pushText(`trailer\n<< /Size ${objectCount + 1} /Root 1 0 R >>\n`);
+  pushText(`startxref\n${xrefOffset}\n%%EOF`);
+
+  const output = new Uint8Array(totalLength);
+  let position = 0;
+  for (const part of parts) {
+    output.set(part, position);
+    position += part.length;
+  }
+  return output;
+}
+
+function bytesToBase64(bytes) {
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+}

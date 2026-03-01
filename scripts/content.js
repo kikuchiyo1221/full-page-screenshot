@@ -1,10 +1,11 @@
 // Content Script for Selection Capture
 
 (function() {
-  // Prevent multiple injections
-  if (window.__screenshotSelectionActive) {
+  // Prevent duplicate initialization
+  if (window.__screenshotContentInitialized) {
     return;
   }
+  window.__screenshotContentInitialized = true;
 
   let overlay = null;
   let selectionBox = null;
@@ -15,6 +16,10 @@
   // Listen for messages from background script
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'startSelection') {
+      if (window.__screenshotSelectionActive) {
+        sendResponse({ success: true, alreadyActive: true });
+        return true;
+      }
       startSelectionMode();
       sendResponse({ success: true });
     }
@@ -53,7 +58,7 @@
       selectionBox.style.height = '0';
       selectionBox.style.display = 'block';
 
-      overlay.querySelector('.screenshot-selection-instructions').style.display = 'none';
+      overlay.querySelector('.screenshot-selection-instructions').classList.add('hidden');
     };
 
     const handleMouseMove = (e) => {
@@ -87,6 +92,7 @@
 
       // Validate selection size
       if (rect.width < 10 || rect.height < 10) {
+        notifySelectionCanceled('selection-too-small');
         cleanup();
         return;
       }
@@ -108,6 +114,7 @@
         });
       } catch (error) {
         console.error('Selection capture failed:', error);
+        notifySelectionCanceled('capture-failed');
       } finally {
         cleanup();
       }
@@ -115,17 +122,21 @@
 
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
+        notifySelectionCanceled('user-canceled');
         cleanup();
       }
     };
 
     const cleanup = () => {
       window.__screenshotSelectionActive = false;
+      if (!overlay) return;
       overlay.removeEventListener('mousedown', handleMouseDown);
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       document.removeEventListener('keydown', handleKeyDown);
       overlay.remove();
+      overlay = null;
+      selectionBox = null;
     };
 
     // Attach event listeners
@@ -141,6 +152,11 @@
       chrome.runtime.sendMessage({ action: 'captureVisibleTab' }, async (response) => {
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+
+        if (!response) {
+          reject(new Error('No screenshot data received'));
           return;
         }
 
@@ -174,6 +190,16 @@
           reject(error);
         }
       });
+    });
+  }
+
+  function notifySelectionCanceled(reason) {
+    chrome.runtime.sendMessage({
+      action: 'selectionCanceled',
+      reason
+    }, () => {
+      // Ignore runtime messaging errors during teardown.
+      void chrome.runtime.lastError;
     });
   }
 })();

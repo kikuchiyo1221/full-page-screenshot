@@ -1,5 +1,8 @@
 // Service Worker for Full Page Screenshot Extension
 
+// Guard against double capture execution
+let captureInProgress = false;
+
 // Alarm handler for delayed capture
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === 'delayed-capture') {
@@ -88,7 +91,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   // Handle captureVisibleTab request from content script
   if (request.action === 'captureVisibleTab') {
-    captureVisibleTab()
+    const windowId = sender.tab?.windowId ?? null;
+    captureVisibleTab(windowId)
       .then(dataUrl => sendResponse(dataUrl))
       .catch(error => sendResponse(null));
     return true;
@@ -162,60 +166,64 @@ async function handleCapture(tab, options) {
 
 // Execute the actual capture
 async function executeCapture(tab, captureOptions) {
-  let imageData;
-
-  if (captureOptions.mode === 'selection') {
-    imageData = await captureSelection(tab);
-  } else if (captureOptions.fromDelayedCapture) {
-    // Delayed capture: check mode preference
-    if (captureOptions.delayMode === 'fullPage') {
-      // Full page delayed capture (may close some dropdowns due to resize)
-      imageData = await captureFullPage(tab, captureOptions);
-    } else {
-      // Visible area only (preserves dropdowns/menus)
-      // First, trigger loading of visible images
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: async () => {
-          // Force load all images in viewport
-          const images = document.querySelectorAll('img');
-          const promises = Array.from(images).map(img => {
-            if (img.complete) return Promise.resolve();
-            // Trigger load by accessing src
-            if (img.dataset.src) {
-              img.src = img.dataset.src;
-            }
-            if (img.loading === 'lazy') {
-              img.loading = 'eager';
-            }
-            return new Promise(resolve => {
-              img.onload = resolve;
-              img.onerror = resolve;
-              setTimeout(resolve, 1000);
-            });
-          });
-          await Promise.all(promises);
-          // Small additional wait
-          await new Promise(r => setTimeout(r, 200));
-        }
-      });
-      imageData = await captureVisibleTab();
-    }
-  } else {
-    // Normal full page capture
-    imageData = await captureFullPage(tab, captureOptions);
+  if (captureInProgress) {
+    console.log('Capture already in progress, skipping');
+    return { success: false, error: 'Capture in progress' };
   }
+  captureInProgress = true;
 
-  // Open editor with captured image
-  await openEditor(tab, imageData, captureOptions);
+  try {
+    let imageData;
 
-  return { success: true };
+    if (captureOptions.mode === 'selection') {
+      imageData = await captureSelection(tab);
+      if (!imageData) {
+        return { success: false, canceled: true };
+      }
+    } else if (captureOptions.fromDelayedCapture) {
+      // Delayed capture: check mode preference
+      if (captureOptions.delayMode === 'fullPage') {
+        imageData = await captureFullPage(tab, captureOptions);
+      } else {
+        // Visible area only (preserves dropdowns/menus)
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: async () => {
+            const images = document.querySelectorAll('img');
+            const promises = Array.from(images).map(img => {
+              if (img.complete) return Promise.resolve();
+              if (img.dataset.src) img.src = img.dataset.src;
+              if (img.loading === 'lazy') img.loading = 'eager';
+              return new Promise(resolve => {
+                img.onload = resolve;
+                img.onerror = resolve;
+                setTimeout(resolve, 1000);
+              });
+            });
+            await Promise.all(promises);
+            await new Promise(r => setTimeout(r, 200));
+          }
+        });
+        imageData = await captureVisibleTabForTab(tab);
+      }
+    } else {
+      // Normal full page capture
+      imageData = await captureFullPage(tab, captureOptions);
+    }
+
+    // Open editor with captured image
+    await openEditor(tab, imageData, captureOptions);
+    return { success: true };
+  } finally {
+    captureInProgress = false;
+  }
 }
 
+
 // Capture visible tab
-async function captureVisibleTab() {
+async function captureVisibleTab(windowId = null) {
   return new Promise((resolve, reject) => {
-    chrome.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
+    chrome.tabs.captureVisibleTab(windowId, { format: 'png' }, (dataUrl) => {
       if (chrome.runtime.lastError) {
         reject(new Error(chrome.runtime.lastError.message));
       } else {
@@ -225,11 +233,44 @@ async function captureVisibleTab() {
   });
 }
 
+async function captureVisibleTabForTab(tab) {
+  const tabId = tab.id;
+  let attached = false;
+
+  try {
+    await attachDebugger(tabId);
+    attached = true;
+
+    const result = await sendDebuggerCommand(tabId, 'Page.captureScreenshot', {
+      format: 'png',
+      captureBeyondViewport: false
+    });
+
+    return 'data:image/png;base64,' + result.data;
+  } catch (error) {
+    console.warn('Tab-specific visible capture failed, falling back:', error);
+    return captureVisibleTab(tab.windowId ?? null);
+  } finally {
+    if (attached) {
+      await detachDebugger(tabId);
+    }
+  }
+}
+
 // Full page capture using Chrome DevTools Protocol
 async function captureFullPage(tab, options) {
   const tabId = tab.id;
+  let debuggerAttached = false;
+  let fixedElementsHidden = false;
 
   try {
+    // Record initial page height before lazy loading scroll
+    const [initialHeightResult] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)
+    });
+    const initialPageHeight = initialHeightResult.result;
+
     // Scroll through the page to trigger lazy loading
     await chrome.scripting.executeScript({
       target: { tabId },
@@ -241,108 +282,391 @@ async function captureFullPage(tab, options) {
           document.documentElement.scrollHeight
         );
 
-        // Scroll through entire page to trigger lazy loading
-        for (let y = 0; y < totalHeight; y += viewportHeight) {
+        // Force eager loading for all lazy images before scrolling
+        const allImages = document.querySelectorAll('img');
+        allImages.forEach(img => {
+          // Handle data-src lazy loading pattern (common in libraries like lazysizes)
+          if (img.dataset.src && !img.src) {
+            img.src = img.dataset.src;
+          }
+          // Handle srcset lazy loading
+          if (img.dataset.srcset && !img.srcset) {
+            img.srcset = img.dataset.srcset;
+          }
+          // Force eager loading
+          if (img.loading === 'lazy') {
+            img.loading = 'eager';
+          }
+        });
+
+        // Handle picture elements with lazy-loaded sources
+        const pictures = document.querySelectorAll('picture');
+        pictures.forEach(picture => {
+          const sources = picture.querySelectorAll('source');
+          sources.forEach(source => {
+            if (source.dataset.srcset && !source.srcset) {
+              source.srcset = source.dataset.srcset;
+            }
+          });
+        });
+
+        // Trigger load for background images by accessing computed styles
+        const allElements = document.querySelectorAll('*');
+        allElements.forEach(el => {
+          // Handle data-background lazy loading pattern
+          if (el.dataset.background) {
+            el.style.backgroundImage = `url(${el.dataset.background})`;
+          }
+          if (el.dataset.bg) {
+            el.style.backgroundImage = `url(${el.dataset.bg})`;
+          }
+        });
+
+        // Scroll through entire page to trigger lazy loading (including Intersection Observer)
+        const scrollStep = Math.floor(viewportHeight * 0.7); // 70% of viewport for overlap
+        // Single scroll pass through initial height to trigger lazy loading
+        // (Multiple passes trigger infinite scroll, duplicating content)
+        for (let y = 0; y < totalHeight; y += scrollStep) {
           window.scrollTo(0, y);
-          await new Promise(r => setTimeout(r, 100));
+          await new Promise(r => setTimeout(r, 300));
         }
+
+        // Scroll to bottom briefly
+        window.scrollTo(0, totalHeight);
+        await new Promise(r => setTimeout(r, 500));
 
         // Scroll back to original position
         window.scrollTo(0, originalScrollY);
 
-        // Wait for all images to load
+        // Wait for layout to stabilize after scroll
+        await new Promise(r => setTimeout(r, 200));
+
+        // Wait for all images to load with longer timeout
         const images = Array.from(document.querySelectorAll('img'));
         await Promise.all(
           images.map(img => {
-            if (img.complete) return Promise.resolve();
+            if (img.complete && img.naturalWidth > 0) return Promise.resolve();
             return new Promise(resolve => {
               img.onload = resolve;
               img.onerror = resolve;
-              setTimeout(resolve, 2000); // 2s timeout per image
+              setTimeout(resolve, 5000); // 5s timeout per image (increased from 2s)
             });
           })
         );
 
-        // Additional wait for any CSS background images and rendering
-        await new Promise(r => setTimeout(r, 500));
+        // Additional wait for CSS background images, web fonts, and final rendering
+        await new Promise(r => setTimeout(r, 800));
       }
     });
 
     // Attach debugger
-    await new Promise((resolve, reject) => {
-      chrome.debugger.attach({ tabId }, '1.3', () => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-        } else {
-          resolve();
-        }
-      });
-    });
+    await attachDebugger(tabId);
+    debuggerAttached = true;
 
-    // Get page dimensions
-    const [dimensions] = await chrome.scripting.executeScript({
-      target: { tabId },
-      func: () => ({
-        width: Math.max(
-          document.body.scrollWidth,
-          document.documentElement.scrollWidth
-        ),
-        height: Math.max(
+    // Get page dimensions and viewport info
+    const {
+      pageHeight: measuredPageHeight,
+      viewportWidth,
+      viewportHeight,
+      devicePixelRatio
+    } = await evaluateWithDebugger(
+      tabId,
+      `(() => ({
+        pageHeight: Math.max(
           document.body.scrollHeight,
           document.documentElement.scrollHeight
         ),
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
         devicePixelRatio: window.devicePixelRatio || 1
-      })
-    });
+      }))()`
+    );
 
-    const { width, height, devicePixelRatio } = dimensions.result;
+    let pageHeight = measuredPageHeight;
+    const dpr = devicePixelRatio;
 
-    // Set device metrics to capture full page
-    await sendDebuggerCommand(tabId, 'Emulation.setDeviceMetricsOverride', {
-      width: width,
-      height: height,
-      deviceScaleFactor: devicePixelRatio,
-      mobile: false
-    });
+    // Cap page height to prevent infinite scroll from duplicating content
+    if (pageHeight > initialPageHeight * 1.5) {
+      console.log(`Capping page height from ${pageHeight} to ${initialPageHeight} (infinite scroll detected)`);
+      pageHeight = initialPageHeight;
+    }
 
-    // Wait for rendering after metrics change
-    await new Promise(r => setTimeout(r, 500));
+    console.log(`Page: ${viewportWidth}x${pageHeight}px, viewport: ${viewportHeight}px, dpr: ${dpr}`);
 
-    // Capture screenshot
-    const result = await sendDebuggerCommand(tabId, 'Page.captureScreenshot', {
-      format: 'png',
-      captureBeyondViewport: true
-    });
+    // Hide fixed/sticky elements so they don't repeat in every chunk
+    await hideFixedElementsWithDebugger(tabId);
+    fixedElementsHidden = true;
 
-    // Reset device metrics
-    await sendDebuggerCommand(tabId, 'Emulation.clearDeviceMetricsOverride', {});
+    // Scroll-and-stitch: capture viewport-sized chunks and draw at actual scroll positions
+    const chunks = [];
+    let targetY = 0;
 
-    // Detach debugger
-    await new Promise(resolve => {
-      chrome.debugger.detach({ tabId }, resolve);
-    });
+    while (targetY < pageHeight) {
+      // Clamp so viewport bottom doesn't exceed page bottom
+      const clampedY = Math.min(targetY, Math.max(0, pageHeight - viewportHeight));
 
-    // Convert base64 to data URL
-    return 'data:image/png;base64,' + result.data;
+      const actualY = await scrollToPositionWithDebugger(tabId, clampedY);
+
+      const screenshot = await sendDebuggerCommand(tabId, 'Page.captureScreenshot', {
+        format: 'png',
+        captureBeyondViewport: false
+      });
+
+      chunks.push({ data: screenshot.data, scrollY: actualY });
+
+      // Stop if we've captured to the bottom
+      if (actualY + viewportHeight >= pageHeight) break;
+
+      // Next position: advance by viewport minus overlap (prevents gaps from rounding)
+      const overlap = Math.min(50, Math.floor(viewportHeight * 0.05));
+      targetY = actualY + viewportHeight - overlap;
+    }
+
+    // Detach debugger immediately after screenshots (no longer needed)
+    if (debuggerAttached) {
+      await detachDebugger(tabId);
+      debuggerAttached = false;
+    }
+
+    // Restore hidden elements
+    if (fixedElementsHidden) {
+      await restoreHiddenElements(tabId);
+      fixedElementsHidden = false;
+    }
+
+    // Stitch: crop overlap and clamp rounding so adjacent chunks stay contiguous.
+    const totalWidthPx = Math.max(1, Math.ceil(viewportWidth * dpr));
+    const totalHeightPx = Math.max(1, Math.ceil(pageHeight * dpr));
+    const canvas = new OffscreenCanvas(totalWidthPx, totalHeightPx);
+    const ctx = canvas.getContext('2d');
+    let previousDrawEndY = 0;
+    let isFirstChunk = true;
+
+    for (const chunk of chunks) {
+      const blob = base64ToBlob(chunk.data, 'image/png');
+      const bitmap = await createImageBitmap(blob);
+
+      let destY = Math.round(chunk.scrollY * dpr);
+      let srcY = 0;
+
+      if (!isFirstChunk) {
+        if (destY < previousDrawEndY) {
+          srcY = previousDrawEndY - destY;
+        }
+        destY = previousDrawEndY;
+      }
+
+      const drawHeight = Math.min(bitmap.height - srcY, totalHeightPx - destY);
+      if (drawHeight > 0) {
+        ctx.drawImage(
+          bitmap,
+          0,
+          srcY,
+          bitmap.width,
+          drawHeight,
+          0,
+          destY,
+          bitmap.width,
+          drawHeight
+        );
+        previousDrawEndY = destY + drawHeight;
+        isFirstChunk = false;
+      }
+
+      bitmap.close();
+    }
+
+    // Convert to data URL
+    const resultBlob = await canvas.convertToBlob({ type: 'image/png' });
+    const arrayBuffer = await resultBlob.arrayBuffer();
+    const base64 = bytesToBase64(new Uint8Array(arrayBuffer));
+    return 'data:image/png;base64,' + base64;
 
   } catch (error) {
     console.error('CDP capture error:', error);
 
-    // Try to detach debugger on error
-    try {
-      await new Promise(resolve => chrome.debugger.detach({ tabId }, resolve));
-    } catch (e) {
-      // Ignore detach errors
+    if (debuggerAttached) {
+      await detachDebugger(tabId);
+      debuggerAttached = false;
+    }
+
+    if (fixedElementsHidden) {
+      await restoreHiddenElements(tabId);
+      fixedElementsHidden = false;
     }
 
     // Fallback to visible area capture
     console.log('CDP failed, falling back to visible area capture');
-    return await captureVisibleTab();
+    return await captureVisibleTab(tab.windowId ?? null);
+  } finally {
+    if (debuggerAttached) {
+      await detachDebugger(tabId);
+    }
+    if (fixedElementsHidden) {
+      await restoreHiddenElements(tabId);
+    }
   }
 }
 
-// Helper to send debugger commands
-function sendDebuggerCommand(tabId, method, params = {}) {
+async function evaluateWithDebugger(tabId, expression) {
+  const evaluation = await sendDebuggerCommand(tabId, 'Runtime.evaluate', {
+    expression,
+    awaitPromise: true,
+    returnByValue: true
+  });
+
+  if (evaluation.exceptionDetails) {
+    const message =
+      evaluation.exceptionDetails.exception?.description ||
+      evaluation.exceptionDetails.text ||
+      'Runtime.evaluate failed';
+    throw new Error(message);
+  }
+
+  return evaluation.result?.value;
+}
+
+async function hideFixedElementsWithDebugger(tabId) {
+  await evaluateWithDebugger(
+    tabId,
+    `(() => {
+      const existingSheet = document.getElementById('__ss-capture-fix');
+      if (existingSheet) {
+        existingSheet.remove();
+      }
+
+      document.querySelectorAll('[data-ss-hide]').forEach(el => {
+        delete el.dataset.ssHide;
+      });
+
+      const sheet = document.createElement('style');
+      sheet.id = '__ss-capture-fix';
+
+      document.querySelectorAll('*').forEach(el => {
+        const pos = getComputedStyle(el).position;
+        if (pos === 'fixed' || pos === 'sticky') {
+          el.dataset.ssHide = '1';
+        }
+      });
+
+      sheet.textContent = '[data-ss-hide] { display: none !important; }';
+      document.head.appendChild(sheet);
+      return true;
+    })()`
+  );
+}
+
+async function scrollToPositionWithDebugger(tabId, targetY) {
+  const clampedY = Math.max(0, Math.round(targetY));
+
+  return evaluateWithDebugger(
+    tabId,
+    `new Promise(resolve => {
+      window.scrollTo(0, ${clampedY});
+      requestAnimationFrame(() => {
+        setTimeout(() => resolve(window.scrollY), 200);
+      });
+    })`
+  );
+}
+
+async function restoreHiddenElements(tabId) {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        const sheet = document.getElementById('__ss-capture-fix');
+        if (sheet) sheet.remove();
+        document.querySelectorAll('[data-ss-hide]').forEach(el => {
+          delete el.dataset.ssHide;
+        });
+      }
+    });
+  } catch (error) {
+    console.warn('Failed to restore hidden capture elements:', error);
+  }
+}
+
+// Wait for network idle using CDP Network domain
+async function waitForNetworkIdle(tabId, idleTime = 1500, timeout = 8000) {
+  let pendingRequests = 0;
+  let idleTimer = null;
+  let listener = null;
+
+  try {
+    await sendDebuggerCommand(tabId, 'Network.enable', {});
+
+    await new Promise((resolve) => {
+      const timeoutId = setTimeout(() => {
+        cleanup();
+        resolve();
+      }, timeout);
+
+      const cleanup = () => {
+        if (idleTimer) clearTimeout(idleTimer);
+        clearTimeout(timeoutId);
+        if (listener) {
+          chrome.debugger.onEvent.removeListener(listener);
+          listener = null;
+        }
+      };
+
+      const resetIdleTimer = () => {
+        if (idleTimer) clearTimeout(idleTimer);
+        if (pendingRequests <= 0) {
+          idleTimer = setTimeout(() => {
+            cleanup();
+            resolve();
+          }, idleTime);
+        }
+      };
+
+      listener = (source, method) => {
+        if (source.tabId !== tabId) return;
+        if (method === 'Network.requestWillBeSent') {
+          pendingRequests++;
+          if (idleTimer) clearTimeout(idleTimer);
+        } else if (method === 'Network.loadingFinished' || method === 'Network.loadingFailed') {
+          pendingRequests = Math.max(0, pendingRequests - 1);
+          resetIdleTimer();
+        }
+      };
+
+      chrome.debugger.onEvent.addListener(listener);
+      // Start idle timer in case there are already no pending requests
+      resetIdleTimer();
+    });
+  } catch (e) {
+    // Fallback: just wait a fixed time
+    await new Promise(r => setTimeout(r, idleTime));
+  } finally {
+    if (listener) {
+      chrome.debugger.onEvent.removeListener(listener);
+    }
+    try {
+      await sendDebuggerCommand(tabId, 'Network.disable', {});
+    } catch (e) {
+      // Ignore
+    }
+  }
+}
+
+// Helper to send debugger commands with auto-reattach on failure
+async function sendDebuggerCommand(tabId, method, params = {}) {
+  try {
+    return await _sendDebuggerCommandRaw(tabId, method, params);
+  } catch (error) {
+    // If debugger was detached, try to reattach once
+    if (error.message && error.message.includes('not attached')) {
+      console.log('Debugger detached, reattaching...');
+      await attachDebugger(tabId);
+      return await _sendDebuggerCommandRaw(tabId, method, params);
+    }
+    throw error;
+  }
+}
+
+function _sendDebuggerCommandRaw(tabId, method, params = {}) {
   return new Promise((resolve, reject) => {
     chrome.debugger.sendCommand({ tabId }, method, params, (result) => {
       if (chrome.runtime.lastError) {
@@ -354,37 +678,103 @@ function sendDebuggerCommand(tabId, method, params = {}) {
   });
 }
 
-// Capture selection mode
-async function captureSelection(tab) {
-  // Inject selection overlay
-  await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    files: ['scripts/content.js']
-  });
-
-  await chrome.scripting.insertCSS({
-    target: { tabId: tab.id },
-    files: ['scripts/content.css']
-  });
-
-  // Send message to start selection
+function attachDebugger(tabId) {
   return new Promise((resolve, reject) => {
-    chrome.tabs.sendMessage(tab.id, { action: 'startSelection' }, (response) => {
+    chrome.debugger.attach({ tabId }, '1.3', () => {
       if (chrome.runtime.lastError) {
         reject(new Error(chrome.runtime.lastError.message));
-      } else if (response && response.success) {
-        // Wait for selection complete message
-        const listener = (message, sender) => {
-          if (sender.tab?.id === tab.id && message.action === 'selectionComplete') {
-            chrome.runtime.onMessage.removeListener(listener);
-            resolve(message.imageData);
-          }
-        };
-        chrome.runtime.onMessage.addListener(listener);
       } else {
-        reject(new Error('Failed to start selection'));
+        resolve();
       }
     });
+  });
+}
+
+function detachDebugger(tabId) {
+  return new Promise((resolve) => {
+    chrome.debugger.detach({ tabId }, () => resolve());
+  });
+}
+
+// Capture selection mode
+async function captureSelection(tab) {
+  const timeoutMs = 120000;
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let timeoutId = null;
+
+    const cleanup = () => {
+      chrome.runtime.onMessage.removeListener(listener);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+    };
+
+    const settleResolve = (value) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(value);
+    };
+
+    const settleReject = (error) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(error);
+    };
+
+    const listener = (message, sender) => {
+      if (sender.tab?.id !== tab.id) return;
+
+      if (message.action === 'selectionComplete') {
+        settleResolve(message.imageData || null);
+      } else if (message.action === 'selectionCanceled') {
+        settleResolve(null);
+      }
+    };
+
+    chrome.runtime.onMessage.addListener(listener);
+
+    timeoutId = setTimeout(() => {
+      settleReject(new Error('Selection capture timed out'));
+    }, timeoutMs);
+
+    const requestSelectionStart = (allowInjectionFallback) => {
+      chrome.tabs.sendMessage(tab.id, { action: 'startSelection' }, async (response) => {
+        if (chrome.runtime.lastError) {
+          const errorMessage = chrome.runtime.lastError.message || '';
+          const shouldInject =
+            allowInjectionFallback &&
+            errorMessage.includes('Receiving end does not exist');
+
+          if (shouldInject) {
+            try {
+              await chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                files: ['scripts/content.js']
+              });
+              await chrome.scripting.insertCSS({
+                target: { tabId: tab.id },
+                files: ['scripts/content.css']
+              });
+              requestSelectionStart(false);
+            } catch (error) {
+              settleReject(error instanceof Error ? error : new Error(String(error)));
+            }
+            return;
+          }
+
+          settleReject(new Error(errorMessage));
+        } else if (!response || !response.success) {
+          settleReject(new Error('Failed to start selection'));
+        }
+      });
+    };
+
+    requestSelectionStart(true);
   });
 }
 
@@ -473,8 +863,11 @@ async function convertImage(dataUrl, format, quality = 92) {
   if (format === 'jpeg') {
     outputBlob = await canvas.convertToBlob({ type: 'image/jpeg', quality: quality / 100 });
   } else if (format === 'pdf') {
-    // PDF conversion would require a library - for now return PNG
-    outputBlob = await canvas.convertToBlob({ type: 'image/png' });
+    const jpegBlob = await canvas.convertToBlob({
+      type: 'image/jpeg',
+      quality: quality / 100
+    });
+    return createPdfDataUrlFromJpegBlob(jpegBlob, canvas.width, canvas.height);
   } else {
     outputBlob = await canvas.convertToBlob({ type: 'image/png' });
   }
@@ -497,4 +890,111 @@ function dataURLtoBlob(dataUrl) {
     u8arr[n] = bstr.charCodeAt(n);
   }
   return new Blob([u8arr], { type: mime });
+}
+
+async function createPdfDataUrlFromJpegBlob(jpegBlob, widthPx, heightPx) {
+  const jpegBytes = new Uint8Array(await jpegBlob.arrayBuffer());
+  const pdfBytes = buildPdfFromJpegBytes(jpegBytes, widthPx, heightPx);
+  return `data:application/pdf;base64,${bytesToBase64(pdfBytes)}`;
+}
+
+function buildPdfFromJpegBytes(jpegBytes, widthPx, heightPx) {
+  const encoder = new TextEncoder();
+  const parts = [];
+  const offsets = [0];
+  let totalLength = 0;
+  const objectCount = 5;
+
+  const pushBytes = (bytes) => {
+    parts.push(bytes);
+    totalLength += bytes.length;
+  };
+
+  const pushText = (text) => {
+    pushBytes(encoder.encode(text));
+  };
+
+  const widthPt = Math.max(1, Math.round(widthPx * 72 / 96));
+  const heightPt = Math.max(1, Math.round(heightPx * 72 / 96));
+
+  const contentStream = `q\n${widthPt} 0 0 ${heightPt} 0 0 cm\n/Im0 Do\nQ\n`;
+  const contentBytes = encoder.encode(contentStream);
+
+  pushText('%PDF-1.4\n%\xFF\xFF\xFF\xFF\n');
+
+  const startObject = (id) => {
+    offsets[id] = totalLength;
+    pushText(`${id} 0 obj\n`);
+  };
+
+  const endObject = () => {
+    pushText('\nendobj\n');
+  };
+
+  startObject(1);
+  pushText('<< /Type /Catalog /Pages 2 0 R >>');
+  endObject();
+
+  startObject(2);
+  pushText('<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  endObject();
+
+  startObject(3);
+  pushText(
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${widthPt} ${heightPt}] ` +
+    '/Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>'
+  );
+  endObject();
+
+  startObject(4);
+  pushText(
+    `<< /Type /XObject /Subtype /Image /Width ${widthPx} /Height ${heightPx} ` +
+    '/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode ' +
+    `/Length ${jpegBytes.length} >>\nstream\n`
+  );
+  pushBytes(jpegBytes);
+  pushText('\nendstream');
+  endObject();
+
+  startObject(5);
+  pushText(`<< /Length ${contentBytes.length} >>\nstream\n`);
+  pushBytes(contentBytes);
+  pushText('endstream');
+  endObject();
+
+  const xrefOffset = totalLength;
+  pushText(`xref\n0 ${objectCount + 1}\n`);
+  pushText('0000000000 65535 f \n');
+  for (let i = 1; i <= objectCount; i += 1) {
+    pushText(`${String(offsets[i]).padStart(10, '0')} 00000 n \n`);
+  }
+  pushText(`trailer\n<< /Size ${objectCount + 1} /Root 1 0 R >>\n`);
+  pushText(`startxref\n${xrefOffset}\n%%EOF`);
+
+  const output = new Uint8Array(totalLength);
+  let position = 0;
+  for (const part of parts) {
+    output.set(part, position);
+    position += part.length;
+  }
+  return output;
+}
+
+function base64ToBlob(base64, mimeType = 'image/png') {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mimeType });
+}
+
+function bytesToBase64(bytes) {
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
 }

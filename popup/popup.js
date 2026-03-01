@@ -77,40 +77,25 @@ function getCaptureOptions() {
 
 // Send capture command to background script
 async function sendCaptureCommand(mode, options = {}) {
+  const captureOptions = {
+    ...getCaptureOptions(),
+    ...options,
+    mode
+  };
+
+  // Send message and wait for acknowledgment before closing
+  // This prevents race condition where popup closes before message is sent
   try {
-    // Disable all buttons during capture
-    document.querySelectorAll('.capture-btn').forEach(btn => {
-      btn.disabled = true;
-    });
-
-    showStatus(chrome.i18n.getMessage('msgCapturing') || 'Capturing...', 'info');
-
-    const captureOptions = {
-      ...getCaptureOptions(),
-      ...options,
-      mode
-    };
-
-    const response = await chrome.runtime.sendMessage({
+    await chrome.runtime.sendMessage({
       action: 'capture',
       options: captureOptions
     });
-
-    if (response.success) {
-      showStatus(chrome.i18n.getMessage('msgCaptureComplete') || 'Capture complete', 'success');
-      // Close popup after successful capture
-      setTimeout(() => window.close(), 1000);
-    } else {
-      throw new Error(response.error || 'Capture failed');
-    }
-  } catch (error) {
-    console.error('Capture error:', error);
-    showStatus(error.message, 'error');
-  } finally {
-    document.querySelectorAll('.capture-btn').forEach(btn => {
-      btn.disabled = false;
-    });
+  } catch (e) {
+    // Ignore errors - capture will proceed in background
   }
+
+  // Small delay to ensure message is fully processed
+  setTimeout(() => window.close(), 50);
 }
 
 // Event Listeners
