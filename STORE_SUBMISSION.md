@@ -113,10 +113,14 @@ Use of Permissions ポリシーは「機能実現に必要な最小限の権限�
 - 商品の単一目的と無関係な用途にデータを使用・転送しない
 - 信用調査や融資目的でデータを使用・転送しない
 
-**Privacy policy URL**: GitHub Pages を有効化して `docs/privacy-policy.html` を公開する。
-Settings → Pages → Source: `main` branch / `/docs` folder。
-URL は `https://kikuchiyo1221.github.io/full-page-screenshot/privacy-policy.html`。
-（`.md` の raw URL は避ける。ブラウザで読める HTML ページであることが求められる）
+**Privacy policy URL**（公開済み・疎通確認済み）:
+
+```
+https://kikuchiyo1221.github.io/full-page-screenshot/privacy-policy.html
+```
+
+GitHub Pages は `main` / `/docs` で有効化済み。manifest の権限を変更したら
+`docs/privacy-policy.html` も必ず更新すること（記載と実際の不一致は却下理由になる）。
 
 ---
 
@@ -205,6 +209,6 @@ explicitly ask it to capture.
       （エディタの描画・クリップボード・ダウンロードは自動化対象外）
 - [ ] 読み込み時に **権限ダイアログが「閲覧履歴の読み取り」等を要求していない**ことを目視確認
 - [ ] `./build.sh` で ZIP を生成してアップロード
-- [ ] GitHub Pages のプライバシーポリシーURLがブラウザで開けることを確認
+- [x] GitHub Pages のプライバシーポリシーURLが公開済み（HTTP 200 確認済み）
 - [ ] 上記 §2〜§4 の英文を各欄に貼付
 - [ ] カテゴリ「ユーティリティ」、言語「日本語」をプライマリに設定
