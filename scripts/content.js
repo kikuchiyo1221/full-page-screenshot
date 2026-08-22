@@ -1,205 +1,216 @@
-// Content Script for Selection Capture
+// Content script: the drag-to-select overlay used by selection capture.
+//
+// Content scripts cannot be ES modules, so this file is self-contained.
 
-(function() {
-  // Prevent duplicate initialization
-  if (window.__screenshotContentInitialized) {
-    return;
-  }
+(function () {
+  if (window.__screenshotContentInitialized) return;
   window.__screenshotContentInitialized = true;
 
-  let overlay = null;
-  let selectionBox = null;
-  let startX = 0;
-  let startY = 0;
-  let isSelecting = false;
+  const OVERLAY_ID = 'screenshot-selection-overlay';
+  const MIN_SELECTION_PX = 10;
+  /** Let the browser paint one frame with the overlay hidden before capturing. */
+  const HIDE_OVERLAY_DELAY_MS = 50;
 
-  // Listen for messages from background script
+  /** @type {SelectionOverlay|null} */
+  let activeOverlay = null;
+
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === 'startSelection') {
-      if (window.__screenshotSelectionActive) {
-        sendResponse({ success: true, alreadyActive: true });
-        return true;
-      }
-      startSelectionMode();
-      sendResponse({ success: true });
+    if (message.action !== 'startSelection') return false;
+
+    if (activeOverlay) {
+      sendResponse({ success: true, alreadyActive: true });
+      return false;
     }
-    return true;
+
+    activeOverlay = new SelectionOverlay(() => { activeOverlay = null; });
+    activeOverlay.open();
+    sendResponse({ success: true });
+    return false;
   });
 
-  function startSelectionMode() {
-    window.__screenshotSelectionActive = true;
+  class SelectionOverlay {
+    #root = null;
+    #box = null;
+    #dimensions = null;
+    #instructions = null;
+    #startX = 0;
+    #startY = 0;
+    #isSelecting = false;
+    #onClosed;
 
-    // Create overlay
-    overlay = document.createElement('div');
-    overlay.id = 'screenshot-selection-overlay';
-    overlay.innerHTML = `
-      <div class="screenshot-selection-instructions">
-        ${chrome.i18n.getMessage('msgSelectArea') || 'Drag to select the area to capture'}
-        <span class="screenshot-selection-hint">ESC to cancel</span>
-      </div>
-      <div class="screenshot-selection-box"></div>
-      <div class="screenshot-selection-dimensions"></div>
-    `;
-    document.body.appendChild(overlay);
+    constructor(onClosed) {
+      this.#onClosed = onClosed;
+      this.onMouseDown = this.onMouseDown.bind(this);
+      this.onMouseMove = this.onMouseMove.bind(this);
+      this.onMouseUp = this.onMouseUp.bind(this);
+      this.onKeyDown = this.onKeyDown.bind(this);
+    }
 
-    selectionBox = overlay.querySelector('.screenshot-selection-box');
-    const dimensions = overlay.querySelector('.screenshot-selection-dimensions');
+    open() {
+      const instructions =
+        chrome.i18n.getMessage('msgSelectArea') || 'Drag to select the area to capture';
 
-    // Event handlers
-    const handleMouseDown = (e) => {
-      if (e.button !== 0) return;
-      isSelecting = true;
-      startX = e.clientX;
-      startY = e.clientY;
+      this.#root = document.createElement('div');
+      this.#root.id = OVERLAY_ID;
+      this.#root.innerHTML = `
+        <div class="screenshot-selection-instructions">
+          ${instructions}
+          <span class="screenshot-selection-hint">ESC to cancel</span>
+        </div>
+        <div class="screenshot-selection-box"></div>
+        <div class="screenshot-selection-dimensions"></div>
+      `;
+      document.body.appendChild(this.#root);
 
-      selectionBox.style.left = startX + 'px';
-      selectionBox.style.top = startY + 'px';
-      selectionBox.style.width = '0';
-      selectionBox.style.height = '0';
-      selectionBox.style.display = 'block';
+      this.#box = this.#root.querySelector('.screenshot-selection-box');
+      this.#dimensions = this.#root.querySelector('.screenshot-selection-dimensions');
+      this.#instructions = this.#root.querySelector('.screenshot-selection-instructions');
 
-      overlay.querySelector('.screenshot-selection-instructions').classList.add('hidden');
-    };
+      this.#root.addEventListener('mousedown', this.onMouseDown);
+      document.addEventListener('mousemove', this.onMouseMove);
+      document.addEventListener('mouseup', this.onMouseUp);
+      document.addEventListener('keydown', this.onKeyDown);
+    }
 
-    const handleMouseMove = (e) => {
-      if (!isSelecting) return;
+    close() {
+      if (!this.#root) return;
 
-      const currentX = e.clientX;
-      const currentY = e.clientY;
+      this.#root.removeEventListener('mousedown', this.onMouseDown);
+      document.removeEventListener('mousemove', this.onMouseMove);
+      document.removeEventListener('mouseup', this.onMouseUp);
+      document.removeEventListener('keydown', this.onKeyDown);
 
-      const left = Math.min(startX, currentX);
-      const top = Math.min(startY, currentY);
-      const width = Math.abs(currentX - startX);
-      const height = Math.abs(currentY - startY);
+      this.#root.remove();
+      this.#root = null;
+      this.#box = null;
+      this.#dimensions = null;
+      this.#instructions = null;
+      this.#onClosed();
+    }
 
-      selectionBox.style.left = left + 'px';
-      selectionBox.style.top = top + 'px';
-      selectionBox.style.width = width + 'px';
-      selectionBox.style.height = height + 'px';
+    onMouseDown(event) {
+      if (event.button !== 0) return;
 
-      // Show dimensions
-      dimensions.textContent = `${width} × ${height}`;
-      dimensions.style.left = (left + width + 10) + 'px';
-      dimensions.style.top = (top + height / 2) + 'px';
-      dimensions.style.display = 'block';
-    };
+      this.#isSelecting = true;
+      this.#startX = event.clientX;
+      this.#startY = event.clientY;
 
-    const handleMouseUp = async (e) => {
-      if (!isSelecting) return;
-      isSelecting = false;
+      Object.assign(this.#box.style, {
+        left: `${this.#startX}px`,
+        top: `${this.#startY}px`,
+        width: '0',
+        height: '0',
+        display: 'block'
+      });
+      this.#instructions.classList.add('hidden');
+    }
 
-      const rect = selectionBox.getBoundingClientRect();
+    onMouseMove(event) {
+      if (!this.#isSelecting) return;
 
-      // Validate selection size
-      if (rect.width < 10 || rect.height < 10) {
-        notifySelectionCanceled('selection-too-small');
-        cleanup();
+      const left = Math.min(this.#startX, event.clientX);
+      const top = Math.min(this.#startY, event.clientY);
+      const width = Math.abs(event.clientX - this.#startX);
+      const height = Math.abs(event.clientY - this.#startY);
+
+      Object.assign(this.#box.style, {
+        left: `${left}px`,
+        top: `${top}px`,
+        width: `${width}px`,
+        height: `${height}px`
+      });
+
+      this.#dimensions.textContent = `${width} × ${height}`;
+      Object.assign(this.#dimensions.style, {
+        left: `${left + width + 10}px`,
+        top: `${top + height / 2}px`,
+        display: 'block'
+      });
+    }
+
+    async onMouseUp() {
+      if (!this.#isSelecting) return;
+      this.#isSelecting = false;
+
+      const rect = this.#box.getBoundingClientRect();
+      if (rect.width < MIN_SELECTION_PX || rect.height < MIN_SELECTION_PX) {
+        notifyCanceled('selection-too-small');
+        this.close();
         return;
       }
 
-      // Hide overlay before capture
-      overlay.style.display = 'none';
-
-      // Wait for render
-      await new Promise(resolve => setTimeout(resolve, 50));
+      this.#root.style.display = 'none';
+      await sleep(HIDE_OVERLAY_DELAY_MS);
 
       try {
-        // Capture the selected region
         const imageData = await captureRegion(rect);
-
-        // Send result to background
-        chrome.runtime.sendMessage({
-          action: 'selectionComplete',
-          imageData: imageData
-        });
+        chrome.runtime.sendMessage({ action: 'selectionComplete', imageData });
       } catch (error) {
         console.error('Selection capture failed:', error);
-        notifySelectionCanceled('capture-failed');
+        notifyCanceled('capture-failed');
       } finally {
-        cleanup();
+        this.close();
       }
-    };
+    }
 
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        notifySelectionCanceled('user-canceled');
-        cleanup();
-      }
-    };
-
-    const cleanup = () => {
-      window.__screenshotSelectionActive = false;
-      if (!overlay) return;
-      overlay.removeEventListener('mousedown', handleMouseDown);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('keydown', handleKeyDown);
-      overlay.remove();
-      overlay = null;
-      selectionBox = null;
-    };
-
-    // Attach event listeners
-    overlay.addEventListener('mousedown', handleMouseDown);
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('keydown', handleKeyDown);
+    onKeyDown(event) {
+      if (event.key !== 'Escape') return;
+      notifyCanceled('user-canceled');
+      this.close();
+    }
   }
 
-  async function captureRegion(rect) {
-    // Request full screenshot from background
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function notifyCanceled(reason) {
+    chrome.runtime.sendMessage({ action: 'selectionCanceled', reason }, () => {
+      void chrome.runtime.lastError; // Ignore messaging errors during teardown.
+    });
+  }
+
+  function requestVisibleTabCapture() {
     return new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage({ action: 'captureVisibleTab' }, async (response) => {
+      chrome.runtime.sendMessage({ action: 'captureVisibleTab' }, (dataUrl) => {
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message));
-          return;
-        }
-
-        if (!response) {
+        } else if (!dataUrl) {
           reject(new Error('No screenshot data received'));
-          return;
-        }
-
-        try {
-          // Crop the image
-          const img = new Image();
-          img.onload = () => {
-            const dpr = window.devicePixelRatio;
-            const canvas = document.createElement('canvas');
-            canvas.width = rect.width * dpr;
-            canvas.height = rect.height * dpr;
-
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(
-              img,
-              rect.left * dpr,
-              rect.top * dpr,
-              rect.width * dpr,
-              rect.height * dpr,
-              0,
-              0,
-              rect.width * dpr,
-              rect.height * dpr
-            );
-
-            resolve(canvas.toDataURL('image/png'));
-          };
-          img.onerror = () => reject(new Error('Failed to load image'));
-          img.src = response;
-        } catch (error) {
-          reject(error);
+        } else {
+          resolve(dataUrl);
         }
       });
     });
   }
 
-  function notifySelectionCanceled(reason) {
-    chrome.runtime.sendMessage({
-      action: 'selectionCanceled',
-      reason
-    }, () => {
-      // Ignore runtime messaging errors during teardown.
-      void chrome.runtime.lastError;
+  function loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('Failed to load image'));
+      image.src = src;
     });
+  }
+
+  /** Crop `rect` (CSS pixels, viewport-relative) out of a screenshot of the viewport. */
+  async function captureRegion(rect) {
+    const image = await loadImage(await requestVisibleTabCapture());
+
+    // The screenshot is scaled by the device pixel ratio *and* the browser's zoom
+    // level, so derive the scale from the image itself instead of assuming DPR.
+    const scale = image.width / window.innerWidth;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(rect.width * scale);
+    canvas.height = Math.round(rect.height * scale);
+
+    canvas.getContext('2d').drawImage(
+      image,
+      rect.left * scale, rect.top * scale, rect.width * scale, rect.height * scale,
+      0, 0, canvas.width, canvas.height
+    );
+
+    return canvas.toDataURL('image/png');
   }
 })();

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "__MSG_extName__",
   "description": "__MSG_extDescription__",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "default_locale": "ja",
   "icons": {
     "16": "icons/icon16.png",
@@ -19,29 +19,17 @@
   },
   "permissions": [
     "activeTab",
-    "downloads",
-    "storage",
-    "unlimitedStorage",
+    "alarms",
     "contextMenus",
+    "downloads",
     "scripting",
-    "debugger",
-    "alarms"
-  ],
-  "host_permissions": [
-    "<all_urls>"
+    "storage",
+    "unlimitedStorage"
   ],
   "background": {
     "service_worker": "scripts/background.js",
     "type": "module"
   },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["scripts/content.js"],
-      "css": ["scripts/content.css"],
-      "run_at": "document_end"
-    }
-  ],
   "options_page": "options/options.html",
   "commands": {
     "capture-full-page": {
@@ -58,11 +46,5 @@
       },
       "description": "__MSG_cmdCaptureSelection__"
     }
-  },
-  "web_accessible_resources": [
-    {
-      "resources": ["editor/editor.html", "editor/editor.css", "editor/editor.js"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  }
 }

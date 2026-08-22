@@ -11,7 +11,8 @@ body {
   line-height: 1.5;
   color: #333;
   background: #fff;
-  width: 280px;
+  /* Wide enough for the delay row's two selects plus its button label. */
+  width: 320px;
 }
 
 /* Container */
@@ -114,6 +115,10 @@ body {
 /* Delay Capture */
 .delay-capture {
   display: flex;
+}
+
+.delay-capture .capture-btn {
+  white-space: nowrap;
 }
 
 .delay-icon {
@@ -230,34 +235,6 @@ body {
 .save-option span {
   font-size: 13px;
   color: #374151;
-}
-
-/* Status Message */
-.status-message {
-  margin-top: 12px;
-  padding: 10px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  text-align: center;
-}
-
-.status-message.hidden {
-  display: none;
-}
-
-.status-message.info {
-  background: #eff6ff;
-  color: #1d4ed8;
-}
-
-.status-message.success {
-  background: #ecfdf5;
-  color: #059669;
-}
-
-.status-message.error {
-  background: #fef2f2;
-  color: #dc2626;
 }
 
 /* Footer */

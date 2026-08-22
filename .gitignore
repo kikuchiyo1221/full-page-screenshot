@@ -13,3 +13,4 @@ build/
 
 # Development
 *.log
+node_modules/

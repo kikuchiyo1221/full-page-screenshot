@@ -1,0 +1,17 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Tall test page</title>
+<style>
+  * { margin:0; padding:0; }
+  /* Six 500px bands => a 3000px page. Solid colours make stitch drift measurable. */
+  .band { height:500px; display:flex; align-items:center; justify-content:center;
+          font:700 64px system-ui; color:#000; }
+  #sticky { position:fixed; top:0; left:0; right:0; height:60px; background:#111; color:#fff;
+            font:700 28px system-ui; display:flex; align-items:center; justify-content:center; z-index:99; }
+</style></head><body>
+<div id="sticky">STICKY HEADER — must not appear in the capture</div>
+<div class="band" style="background:#ff0000">1</div>
+<div class="band" style="background:#00ff00">2</div>
+<div class="band" style="background:#0000ff">3</div>
+<div class="band" style="background:#ffff00">4</div>
+<div class="band" style="background:#ff00ff">5</div>
+<div class="band" style="background:#00ffff">6</div>
+</body></html>

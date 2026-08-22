@@ -1,0 +1,17 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><link rel="stylesheet" href="frame.css">
+<style>
+  .stage { padding: 24px 40px 56px; }
+  .editor-shell { width:1200px; height:520px; border-radius:12px; overflow:hidden;
+                  box-shadow:0 24px 60px rgba(15,23,42,.24); }
+  iframe { border:0; width:1200px; height:520px; }
+</style></head>
+<body>
+  <div class="headline">
+    <h1>撮ったら、<span class="accent">そのまま注釈。</span></h1>
+    <p>矢印・四角形・円・テキスト・マーカー／Undo・Redo 対応</p>
+  </div>
+  <div class="stage">
+    <div class="editor-shell"><iframe src="ui/editor.html" scrolling="no"></iframe></div>
+  </div>
+  <div class="caption">保存は PNG / JPEG / PDF。クリップボードへのコピーにも対応</div>
+</body></html>

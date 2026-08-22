@@ -1,95 +1,71 @@
-// Options Page Script
+// Options page: edit and persist the extension's default settings.
 
-// Initialize i18n
-function initI18n() {
-  document.querySelectorAll('[data-i18n]').forEach(elem => {
-    const key = elem.getAttribute('data-i18n');
-    const message = chrome.i18n.getMessage(key);
-    if (message) {
-      elem.textContent = message;
-    }
-  });
-}
+import { applyI18n, t } from '../lib/i18n.js';
+import { buildFilename } from '../lib/filename.js';
+import { DEFAULT_SETTINGS, loadSettings, saveSettings } from '../lib/settings.js';
 
-// Load saved settings
-async function loadSettings() {
-  const settings = await chrome.storage.sync.get({
-    defaultFormat: 'png',
-    jpegQuality: 92,
-    defaultSaveDownload: true,
-    defaultSaveClipboard: false,
-    filePrefix: 'screenshot'
-  });
+const SHORTCUTS_URL = 'chrome://extensions/shortcuts';
+const SAVE_STATUS_TIMEOUT_MS = 3000;
 
-  document.getElementById('default-format').value = settings.defaultFormat;
-  document.getElementById('jpeg-quality').value = settings.jpegQuality;
-  document.getElementById('jpeg-quality-value').textContent = settings.jpegQuality + '%';
-  document.getElementById('save-download').checked = settings.defaultSaveDownload;
-  document.getElementById('save-clipboard').checked = settings.defaultSaveClipboard;
-  document.getElementById('file-prefix').value = settings.filePrefix;
+const fields = {
+  format: () => document.getElementById('default-format'),
+  quality: () => document.getElementById('jpeg-quality'),
+  qualityValue: () => document.getElementById('jpeg-quality-value'),
+  saveDownload: () => document.getElementById('save-download'),
+  saveClipboard: () => document.getElementById('save-clipboard'),
+  prefix: () => document.getElementById('file-prefix')
+};
+
+async function restoreSettings() {
+  const settings = await loadSettings();
+
+  fields.format().value = settings.defaultFormat;
+  fields.quality().value = settings.jpegQuality;
+  fields.qualityValue().textContent = `${settings.jpegQuality}%`;
+  fields.saveDownload().checked = settings.defaultSaveDownload;
+  fields.saveClipboard().checked = settings.defaultSaveClipboard;
+  fields.prefix().value = settings.filePrefix;
 
   updateFilenamePreview();
 }
 
-// Save settings
-async function saveSettings() {
-  const settings = {
-    defaultFormat: document.getElementById('default-format').value,
-    jpegQuality: parseInt(document.getElementById('jpeg-quality').value),
-    defaultSaveDownload: document.getElementById('save-download').checked,
-    defaultSaveClipboard: document.getElementById('save-clipboard').checked,
-    filePrefix: document.getElementById('file-prefix').value.trim() || 'screenshot'
-  };
-
-  await chrome.storage.sync.set(settings);
-
-  // Show save status
-  const statusEl = document.getElementById('save-status');
-  statusEl.textContent = chrome.i18n.getMessage('msgSettingsSaved') || 'Settings saved';
-  statusEl.classList.remove('hidden');
-
-  setTimeout(() => {
-    statusEl.classList.add('hidden');
-  }, 3000);
-}
-
-// Update filename preview
-function updateFilenamePreview() {
-  const prefix = document.getElementById('file-prefix').value.trim() || 'screenshot';
-  const format = document.getElementById('default-format').value;
-  const extension = format === 'jpeg' ? 'jpg' : format;
-  const timestamp = new Date().toISOString()
-    .replace(/[-:]/g, '')
-    .replace('T', '_')
-    .split('.')[0];
-
-  document.getElementById('filename-preview').textContent = `${prefix}_${timestamp}.${extension}`;
-}
-
-// Initialize
-document.addEventListener('DOMContentLoaded', async () => {
-  initI18n();
-  await loadSettings();
-
-  // Quality slider
-  const qualitySlider = document.getElementById('jpeg-quality');
-  qualitySlider.addEventListener('input', (e) => {
-    document.getElementById('jpeg-quality-value').textContent = e.target.value + '%';
+async function persistSettings() {
+  await saveSettings({
+    defaultFormat: fields.format().value,
+    jpegQuality: parseInt(fields.quality().value, 10),
+    defaultSaveDownload: fields.saveDownload().checked,
+    defaultSaveClipboard: fields.saveClipboard().checked,
+    filePrefix: fields.prefix().value.trim() || DEFAULT_SETTINGS.filePrefix
   });
 
-  // File prefix input
-  const prefixInput = document.getElementById('file-prefix');
-  prefixInput.addEventListener('input', updateFilenamePreview);
+  const status = document.getElementById('save-status');
+  status.textContent = t('msgSettingsSaved') || 'Settings saved';
+  status.classList.remove('hidden');
+  setTimeout(() => status.classList.add('hidden'), SAVE_STATUS_TIMEOUT_MS);
+}
 
-  // Format select
-  document.getElementById('default-format').addEventListener('change', updateFilenamePreview);
+function updateFilenamePreview() {
+  document.getElementById('filename-preview').textContent = buildFilename({
+    prefix: fields.prefix().value,
+    format: fields.format().value
+  });
+}
 
-  // Save button
-  document.getElementById('btn-save').addEventListener('click', saveSettings);
+document.addEventListener('DOMContentLoaded', async () => {
+  applyI18n();
+  await restoreSettings();
 
-  // Open shortcuts link
-  document.getElementById('open-shortcuts').addEventListener('click', (e) => {
-    e.preventDefault();
-    chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+  fields.quality().addEventListener('input', (event) => {
+    fields.qualityValue().textContent = `${event.target.value}%`;
+  });
+
+  fields.prefix().addEventListener('input', updateFilenamePreview);
+  fields.format().addEventListener('change', updateFilenamePreview);
+
+  document.getElementById('btn-save').addEventListener('click', persistSettings);
+
+  document.getElementById('open-shortcuts').addEventListener('click', (event) => {
+    event.preventDefault();
+    chrome.tabs.create({ url: SHORTCUTS_URL });
   });
 });

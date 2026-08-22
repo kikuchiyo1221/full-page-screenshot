@@ -1,0 +1,45 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../../../popup/popup.css">
+<style>body { width: 320px; }</style></head>
+<body>
+  <div class="popup-container">
+    <header class="popup-header"><h1>スクリーンショット</h1></header>
+    <main class="popup-main">
+      <section class="capture-modes">
+        <button class="capture-btn primary">
+          <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line>
+          </svg><span>ページ全体をキャプチャ</span>
+        </button>
+        <button class="capture-btn secondary">
+          <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 3v4M3 5h4M5 21v-4M3 19h4M19 3v4M21 5h-4M19 21v-4M21 19h-4"></path><rect x="7" y="7" width="10" height="10" rx="1"></rect>
+          </svg><span>範囲を選択してキャプチャ</span>
+        </button>
+        <div class="delay-capture">
+          <div class="delay-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          </div>
+          <select class="delay-select delay-select-time"><option>3秒</option></select>
+          <select class="delay-select delay-select-mode"><option>表示領域</option></select>
+          <button class="capture-btn secondary">後にキャプチャ</button>
+        </div>
+      </section>
+      <section class="format-section">
+        <label class="section-label">形式</label>
+        <div class="format-options">
+          <label class="format-option"><input type="radio" name="format" checked><span>PNG</span></label>
+          <label class="format-option"><input type="radio" name="format"><span>JPEG</span></label>
+          <label class="format-option"><input type="radio" name="format"><span>PDF</span></label>
+        </div>
+      </section>
+      <section class="save-section">
+        <label class="section-label">保存</label>
+        <div class="save-options">
+          <label class="save-option"><input type="checkbox" checked><span>保存</span></label>
+          <label class="save-option"><input type="checkbox"><span>コピー</span></label>
+        </div>
+      </section>
+    </main>
+  </div>
+</body></html>

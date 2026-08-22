@@ -153,3 +153,28 @@ Use this table while testing:
 | 8 |  |  |  |
 | 9 |  |  |  |
 | 10 |  |  |  |
+
+## 10. Permissions (Chrome Web Store review blockers)
+
+Most of this section is automated — `npm run test:e2e` asserts the permission set and the
+stitched output against a real headless Chrome. Run the manual steps below as well after
+any change to `manifest.json` or to how the capture works, because the automated run
+cannot see the install dialog or the debugging info bar.
+v1.0.2 was rejected for over-broad permissions, so these are release blockers, not nits.
+
+1. Remove the extension, then load it again as an unpacked extension.
+2. Read the permission dialog / the "Details" page permission list.
+3. Run a full page capture on a long page and watch the top of the browser window.
+4. Open `chrome://extensions` itself and try to capture it.
+
+Pass criteria:
+- The permission list does **not** mention "Read your browsing history" or
+  "Read and change all your data on all websites".
+- No "this browser is being debugged by software" bar appears at any point.
+- `manifest.json` requests no `host_permissions`, no `debugger`, and no `content_scripts`.
+- Capturing a `chrome://` page fails quietly (an error in the service worker console),
+  without leaving the page scrolled to the bottom or with elements still hidden.
+
+Fail if:
+- Any host permission or the debugger permission is present.
+- The debugging info bar appears (it also shifts the viewport and breaks stitching).

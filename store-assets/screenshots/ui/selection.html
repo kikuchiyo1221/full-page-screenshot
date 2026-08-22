@@ -1,0 +1,31 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../../../scripts/content.css">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif; background:#fff; }
+  .hero { height:120px; background:linear-gradient(90deg,#1e293b,#475569); }
+  .wrap { padding:22px 28px; }
+  .row { display:flex; gap:14px; margin-bottom:18px; }
+  .card { flex:1; height:110px; border-radius:9px; background:#e2e8f0; }
+  .card.hi { background:#dbeafe; }
+  .ln { height:11px; border-radius:6px; background:#e2e8f0; margin:11px 0; }
+  .ln.s { width:48%; } .ln.m { width:76%; }
+  /* Freeze the overlay in its mid-drag state for the screenshot. */
+  .screenshot-selection-box { display:block; left:150px; top:150px; width:520px; height:230px; }
+  .screenshot-selection-dimensions { display:block; left:684px; top:262px; }
+  .screenshot-selection-instructions { display:none; }
+</style></head>
+<body>
+  <div class="hero"></div>
+  <div class="wrap">
+    <div class="row"><div class="card"></div><div class="card hi"></div><div class="card"></div></div>
+    <div class="ln"></div><div class="ln m"></div><div class="ln s"></div>
+    <div class="row"><div class="card"></div><div class="card"></div><div class="card hi"></div></div>
+    <div class="ln m"></div><div class="ln"></div>
+  </div>
+  <div id="screenshot-selection-overlay">
+    <div class="screenshot-selection-instructions"></div>
+    <div class="screenshot-selection-box"></div>
+    <div class="screenshot-selection-dimensions">520 × 230</div>
+  </div>
+</body></html>

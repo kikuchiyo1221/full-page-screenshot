@@ -1,0 +1,51 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><link rel="stylesheet" href="frame.css">
+<style>
+  .stage { flex-direction:column; gap:26px; padding-top:16px; }
+  .badges { display:flex; gap:16px; }
+  .cards { display:flex; gap:20px; }
+  .card {
+    width:352px; background:#fff; border-radius:14px; padding:26px 28px;
+    box-shadow:0 14px 36px rgba(15,23,42,.1); border:1px solid #e2e8f0;
+  }
+  .card h3 { font-size:18px; font-weight:800; margin-bottom:12px; display:flex; gap:9px; align-items:center; }
+  .card ul { list-style:none; }
+  .card li { font-size:14.5px; color:#475569; line-height:1.55; padding:6px 0 6px 22px; position:relative; }
+  .card li::before { content:'✓'; position:absolute; left:0; color:#16a34a; font-weight:800; }
+  .card li.no::before { content:'✕'; color:#dc2626; }
+  .perm { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13px;
+          background:#f1f5f9; padding:1px 6px; border-radius:4px; color:#0f172a; }
+</style></head>
+<body>
+  <div class="headline">
+    <h1>権限は最小限。<span class="accent">データは端末から出ない。</span></h1>
+    <p>ホスト権限を一切要求しないので、撮影を指示したタブ以外には触れません</p>
+  </div>
+  <div class="stage">
+    <div class="badges">
+      <span class="badge">🔒 外部送信ゼロ</span>
+      <span class="badge">🚫 ホスト権限なし</span>
+      <span class="badge">📊 トラッキングなし</span>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <h3>要求する権限</h3>
+        <ul>
+          <li><span class="perm">activeTab</span> 操作したタブ1つだけ</li>
+          <li><span class="perm">scripting</span> 対象ページの計測とスクロール</li>
+          <li><span class="perm">downloads</span> 画像の保存</li>
+          <li><span class="perm">storage</span> 設定と一時画像</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>要求しない権限</h3>
+        <ul>
+          <li class="no"><span class="perm">&lt;all_urls&gt;</span> 全サイトへのアクセス</li>
+          <li class="no"><span class="perm">debugger</span> DevTools Protocol</li>
+          <li class="no"><span class="perm">history</span> 閲覧履歴</li>
+          <li class="no"><span class="perm">cookies</span> Cookie の読み取り</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="caption">すべての処理はお使いのデバイス内で完結します</div>
+</body></html>

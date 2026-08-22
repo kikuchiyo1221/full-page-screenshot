@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — Full Page Screenshot</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    max-width: 44rem;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 4rem;
+    font: 16px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    color: #1f2933;
+    background: #fff;
+  }
+  h1 { font-size: 1.75rem; margin-bottom: .25rem; }
+  h2 { font-size: 1.25rem; margin-top: 2.5rem; border-bottom: 1px solid #e4e7eb; padding-bottom: .3rem; }
+  h3 { font-size: 1rem; margin-top: 1.75rem; }
+  .updated { color: #616e7c; font-size: .9rem; }
+  code { background: #f5f7fa; padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+  ul { padding-left: 1.25rem; }
+  li { margin: .4rem 0; }
+  .callout { background: #f5f7fa; border-left: 3px solid #2f80ed; padding: .8rem 1rem; margin: 1.25rem 0; }
+  hr { border: 0; border-top: 1px solid #e4e7eb; margin: 3rem 0; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #14181d; color: #e4e7eb; }
+    h2 { border-bottom-color: #323f4b; }
+    code, .callout { background: #1f2933; }
+    .updated { color: #9aa5b1; }
+    hr { border-top-color: #323f4b; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Privacy Policy — Full Page Screenshot</h1>
+<p class="updated">Last updated: 2026-08-23</p>
+
+<h2>English</h2>
+
+<h3>Data collection</h3>
+<p>This extension does <strong>not</strong> collect, store, or transmit any personal data or
+browsing information to external servers. There is no analytics, no tracking, and no
+third-party service of any kind.</p>
+
+<h3>What the extension does</h3>
+<ul>
+  <li>Captures screenshots of the page you explicitly ask it to capture</li>
+  <li>Stores that screenshot temporarily in local browser storage so the editor tab can open it</li>
+  <li>Downloads the image to your device when you press Save</li>
+  <li>Copies the image to your clipboard when you press Copy</li>
+</ul>
+
+<h3>Permissions</h3>
+<ul>
+  <li><code>activeTab</code> — grants access to a single tab, only after you explicitly start a
+      capture (toolbar button, keyboard shortcut, or right-click menu). The access ends when
+      that tab navigates.</li>
+  <li><code>scripting</code> — used to measure and scroll the page being captured, to hide fixed
+      headers so they are not repeated in every stitched section, and to show the drag-to-select
+      overlay. Code is injected only into the tab you are capturing.</li>
+  <li><code>downloads</code> — saves the finished screenshot to your device.</li>
+  <li><code>storage</code> / <code>unlimitedStorage</code> — stores your preferences and passes the
+      captured image to the editor tab. Full-page screenshots regularly exceed the default 10 MB
+      quota, which is why unlimited storage is requested.</li>
+  <li><code>alarms</code> — implements the 3 / 5 / 10 second delayed capture.</li>
+  <li><code>contextMenus</code> — adds the two right-click menu entries.</li>
+</ul>
+
+<div class="callout">
+  The extension requests <strong>no host permissions</strong>. It has no standing access to the
+  sites you visit and cannot read or capture any page you have not explicitly asked it to.
+</div>
+
+<h3>Data storage</h3>
+<p>Everything is processed locally on your device using Chrome's storage API. No data is sent
+to any server.</p>
+
+<h3>Contact</h3>
+<p>Questions about this policy: please open an issue on the project's GitHub repository.</p>
+
+<hr>
+
+<h2>日本語</h2>
+
+<h3>データ収集について</h3>
+<p>この拡張機能は、個人データや閲覧情報を外部サーバーに収集・保存・送信することは<strong>一切ありません</strong>。
+アナリティクス、トラッキング、サードパーティサービスも一切使用していません。</p>
+
+<h3>拡張機能の動作</h3>
+<ul>
+  <li>あなたが明示的に指示したページのスクリーンショットを撮影します</li>
+  <li>編集画面で開くために、その画像をブラウザのローカルストレージに一時保存します</li>
+  <li>「保存」を押したときにデバイスへダウンロードします</li>
+  <li>「コピー」を押したときにクリップボードへコピーします</li>
+</ul>
+
+<h3>使用する権限</h3>
+<ul>
+  <li><code>activeTab</code> — あなたがキャプチャを開始した時（アイコンクリック・ショートカット・
+      右クリックメニュー）にのみ、そのタブ1つへのアクセスが付与されます。タブが遷移すると失効します。</li>
+  <li><code>scripting</code> — キャプチャ対象ページの計測・スクロール、固定ヘッダーの一時非表示、
+      範囲選択オーバーレイの表示に使用します。注入先はキャプチャ対象のタブのみです。</li>
+  <li><code>downloads</code> — スクリーンショットをデバイスに保存します。</li>
+  <li><code>storage</code> / <code>unlimitedStorage</code> — 設定の保存と、撮影した画像を編集画面へ
+      受け渡すために使用します。フルページの画像は標準の10MB制限を超えることが多いため、
+      無制限ストレージを要求しています。</li>
+  <li><code>alarms</code> — 3 / 5 / 10 秒の遅延キャプチャに使用します。</li>
+  <li><code>contextMenus</code> — 右クリックメニューの2項目を追加します。</li>
+</ul>
+
+<div class="callout">
+  この拡張機能は <strong>host permissions（ホスト権限）を一切要求しません</strong>。
+  閲覧中のサイトへの常時アクセス権はなく、あなたが明示的に指示していないページを読み取ることはできません。
+</div>
+
+<h3>データの保存</h3>
+<p>すべての処理はChromeのストレージAPIを使い、お使いのデバイス上でローカルに完結します。
+外部サーバーへの送信は一切ありません。</p>
+
+<h3>お問い合わせ</h3>
+<p>このポリシーに関するご質問は、プロジェクトのGitHubリポジトリでissueを作成してください。</p>
+
+</body>
+</html>

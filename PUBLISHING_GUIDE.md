@@ -76,7 +76,6 @@ All data is processed locally and never sent to external servers.
 
 ### Step 1: ZIPファイルの準備
 ```bash
-cd /Users/miyamotokikuchiyo/Documents/antigravity/chrome-screenshot-extension
 ./build.sh
 ```
 生成されるファイル: `screenshot-extension.zip`
@@ -94,12 +93,9 @@ cd /Users/miyamotokikuchiyo/Documents/antigravity/chrome-screenshot-extension
 5. **プロモーションタイル**: 440x280の画像をアップロード
 
 ### Step 4: プライバシー設定
-1. **プライバシーポリシー**: PRIVACY_POLICY.md をホスティングしてURLを入力
-   - GitHub Pagesを使用するか
-   - GitHubリポジトリのRAWファイルURLを使用
-2. **データ使用の開示**:
-   - 「個人情報を収集しない」を選択
-   - 「ユーザーの閲覧履歴を収集しない」を選択
+1. **プライバシーポリシー**: GitHub Pages で `docs/privacy-policy.html` を公開しURLを入力
+2. **データ使用の開示**: STORE_SUBMISSION.md §4 の表のとおり、全項目「収集しない」
+3. **権限の justification**: STORE_SUBMISSION.md §3 の英文を各欄に貼付
 
 ### Step 5: 配布設定
 1. **公開設定**: 「一般公開」を選択
@@ -110,16 +106,25 @@ cd /Users/miyamotokikuchiyo/Documents/antigravity/chrome-screenshot-extension
 2. 「審査のために送信」をクリック
 3. 審査は通常1〜3営業日
 
-## 審査に通るためのヒント
+## 審査に通るために
 
-1. **debugger権限の説明**
-   - 審査担当者への注意で「debugger権限はフルページスクリーンショットのためにDevTools Protocolを使用するためのみに使用」と説明
+> **重要**: v1.0.2 は `debugger` 権限と `<all_urls>` の権限過剰で却下された。
+> 「説明を書けば通る」種類の指摘ではないため、v1.1.0 で両方を実装ごと削除した。
+> 再申請に必要な文面・チェックリストは **[STORE_SUBMISSION.md](STORE_SUBMISSION.md)** に
+> まとめてあるので、そちらを使うこと。
 
-2. **host_permissions の説明**
-   - 「あらゆるWebページでスクリーンショットを撮影するために必要」と説明
+1. **権限は最小限のまま維持する**
+   - 現在の要求は `activeTab` / `scripting` / `downloads` / `storage` / `unlimitedStorage` /
+     `alarms` / `contextMenus` のみ。host permissions はゼロ。
+   - 新機能のために `debugger`・`tabs`・`<all_urls>` を足したくなったら、まず
+     `activeTab` + `scripting` で実現できないかを検討する。
 
-3. **プライバシーポリシーの公開**
-   - GitHubにリポジトリを公開し、PRIVACY_POLICY.mdへのリンクを使用
+2. **各権限の justification 欄を埋める**
+   - STORE_SUBMISSION.md §3 の英文をそのまま貼る。空欄や一言だけの説明は却下理由になる。
+
+3. **プライバシーポリシーは HTML ページとして公開する**
+   - `docs/privacy-policy.html` を GitHub Pages で公開し、その URL を登録する。
+   - `.md` の raw URL はブラウザで読める体裁にならないため避ける。
 
 ## 公開後
 
@@ -134,15 +139,13 @@ cd /Users/miyamotokikuchiyo/Documents/antigravity/chrome-screenshot-extension
 
 ## プライバシーポリシーのホスティング
 
-### オプション1: GitHub Pages
+### GitHub Pages（推奨）
 1. リポジトリの Settings → Pages
-2. Source: main branch / docs folder
-3. URL: `https://yourusername.github.io/repo-name/PRIVACY_POLICY`
+2. Source: `main` branch / `/docs` folder
+3. URL: `https://kikuchiyo1221.github.io/full-page-screenshot/privacy-policy.html`
 
-### オプション2: GitHub RAW URL
-```
-https://raw.githubusercontent.com/yourusername/repo-name/main/PRIVACY_POLICY.md
-```
+`docs/privacy-policy.html` は用意済み。日英併記で、要求している権限の一覧も
+manifest と一致させてある。manifest の権限を変えたら**このページも必ず更新すること**
+（不一致は却下理由になる）。
 
-### オプション3: 専用ページ作成
-PRIVACY_POLICY.html を作成してホスティング
+なお raw の `.md` URL は避ける。ブラウザで読める HTML ページであることが求められる。

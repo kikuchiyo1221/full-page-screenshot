@@ -1,0 +1,27 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><link rel="stylesheet" href="frame.css">
+<style>
+  .stage { gap: 70px; }
+  iframe { border:0; width:320px; height:430px; }
+  .popup-shell { border-radius:12px; overflow:hidden; box-shadow:0 22px 54px rgba(15,23,42,.22); background:#fff; }
+  .points { display:flex; flex-direction:column; gap:22px; max-width:430px; }
+  .point { display:flex; gap:16px; align-items:flex-start; }
+  .num { flex:0 0 34px; height:34px; border-radius:50%; background:#2563eb; color:#fff;
+         font-size:16px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .point h3 { font-size:19px; font-weight:700; margin-bottom:4px; }
+  .point p { font-size:15px; color:#64748b; line-height:1.6; }
+</style></head>
+<body>
+  <div class="headline">
+    <h1>クリック1回で、<span class="accent">撮影から保存まで。</span></h1>
+    <p>3つのキャプチャモードをポップアップから選ぶだけ</p>
+  </div>
+  <div class="stage">
+    <div class="popup-shell"><iframe src="ui/popup.html" scrolling="no"></iframe></div>
+    <div class="points">
+      <div class="point"><div class="num">1</div><div><h3>ページ全体</h3><p>スクロール部分も自動で連結。長い記事や検索結果もまるごと1枚に。</p></div></div>
+      <div class="point"><div class="num">2</div><div><h3>範囲を選択</h3><p>ドラッグした部分だけを切り出して保存します。</p></div></div>
+      <div class="point"><div class="num">3</div><div><h3>遅延キャプチャ</h3><p>3秒／5秒／10秒後に撮影。開いたメニューやツールチップも残せます。</p></div></div>
+    </div>
+  </div>
+  <div class="caption">出力形式（PNG / JPEG / PDF）もポップアップから切り替えられます</div>
+</body></html>

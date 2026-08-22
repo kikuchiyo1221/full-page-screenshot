@@ -1,0 +1,19 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><link rel="stylesheet" href="frame.css">
+<style>
+  .stage { padding-top: 20px; }
+  .window { width: 1000px; }
+  iframe { border:0; width:1000px; height:470px; display:block; }
+</style></head>
+<body>
+  <div class="headline">
+    <h1>必要な範囲だけ、<span class="accent">ドラッグで切り出す。</span></h1>
+    <p>選択中はサイズをリアルタイム表示。ESC でいつでも中止できます</p>
+  </div>
+  <div class="stage">
+    <div class="window">
+      <div class="window-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="omnibox">example.com</span></div>
+      <iframe src="ui/selection.html" scrolling="no"></iframe>
+    </div>
+  </div>
+  <div class="caption">Alt+Shift+A ですぐ範囲選択モードに入れます</div>
+</body></html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><link rel="stylesheet" href="frame.css">
+<style>
+  .stage { gap: 64px; align-items: center; }
+  .col { display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .label { font-size:15px; font-weight:700; color:#475569; letter-spacing:.02em; }
+  .label.blue { color:#2563eb; }
+  .viewport-shot { width: 380px; }
+  .viewport-shot .clip { height: 232px; overflow: hidden; position: relative; }
+  .viewport-shot .clip::after {
+    content:''; position:absolute; left:0; right:0; bottom:0; height:44px;
+    background: linear-gradient(180deg, rgba(255,255,255,0), #fff);
+  }
+  /* The long page is shown scaled down so the whole of it fits in the frame. */
+  .full-shot { width: 300px; height: 424px; border-radius:8px; overflow:hidden;
+               box-shadow: 0 20px 46px rgba(15,23,42,.2); border:1px solid #e2e8f0; background:#fff; }
+  .full-shot .mock-page { width: 600px; transform: scale(.5); transform-origin: top left; }
+  .arrow { font-size:40px; color:#93c5fd; font-weight:800; }
+</style></head>
+<body>
+  <div class="headline">
+    <h1>ページ全体を、<span class="accent">1枚に。</span></h1>
+    <p>スクロールが必要な長いページも、自動でつなぎ合わせて保存します</p>
+  </div>
+  <div class="stage">
+    <div class="col">
+      <div class="window viewport-shot">
+        <div class="window-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="omnibox">example.com</span></div>
+        <div class="clip">
+          <div class="mock-page">
+            <div class="mock-hero"></div>
+            <div class="mock-row"><div class="mock-card"></div><div class="mock-card"></div></div>
+            <div class="mock-line"></div><div class="mock-line mid"></div><div class="mock-line short"></div>
+            <div class="mock-row"><div class="mock-card"></div><div class="mock-card"></div></div>
+            <div class="mock-line mid"></div><div class="mock-line"></div>
+          </div>
+        </div>
+      </div>
+      <div class="label">従来のスクショ ＝ 表示領域だけ</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="col">
+      <div class="full-shot">
+        <div class="mock-page">
+          <div class="mock-hero"></div>
+          <div class="mock-row"><div class="mock-card"></div><div class="mock-card"></div></div>
+          <div class="mock-line"></div><div class="mock-line mid"></div><div class="mock-line short"></div>
+          <div class="mock-row"><div class="mock-card"></div><div class="mock-card"></div></div>
+          <div class="mock-line mid"></div><div class="mock-line"></div><div class="mock-line short"></div>
+          <div class="mock-row"><div class="mock-card"></div><div class="mock-card"></div><div class="mock-card"></div></div>
+          <div class="mock-line"></div><div class="mock-line mid"></div>
+          <div class="mock-row"><div class="mock-card"></div><div class="mock-card"></div></div>
+          <div class="mock-line short"></div><div class="mock-line"></div><div class="mock-line mid"></div>
+          <div class="mock-row"><div class="mock-card"></div><div class="mock-card"></div></div>
+          <div class="mock-line"></div>
+        </div>
+      </div>
+      <div class="label blue">この拡張 ＝ ページ全体</div>
+    </div>
+  </div>
+  <div class="caption">Alt+Shift+S / ツールバーアイコン / 右クリックメニュー から実行</div>
+</body></html>

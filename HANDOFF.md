@@ -1,120 +1,133 @@
-# Full Page Screenshot Extension - Bug Fix Handoff
+# Full Page Screenshot Extension — Architecture & Known Issues
 
-## Project Overview
+## Overview
 
-Chrome MV3 extension for capturing full-page screenshots using a scroll-and-stitch approach.
-- **Tech**: Chrome Extension Manifest V3, Service Worker, Chrome DevTools Protocol (CDP)
-- **Key file**: `scripts/background.js` (all capture logic, 906 lines)
-- **Architecture**: Popup triggers capture → background.js captures → opens editor tab
+Chrome MV3 extension that captures a full page by scrolling the viewport and stitching
+the screenshots together.
 
-## Current Bugs (3 issues, all in `captureFullPage()` function, line 260-493)
+- **Tech**: Manifest V3, module service worker, `chrome.tabs.captureVisibleTab`
+- **Dependencies**: none. Plain ES modules, no build step.
+- **Flow**: popup / shortcut / context menu → service worker captures → editor tab opens
 
-### Bug 1: Debugger detaches during capture
-**Error**: `Debugger is not attached to the tab with id: XXXXXXX`
-**Where**: `sendDebuggerCommand()` calls inside the scroll-and-stitch loop (line 429)
-**What happens**:
-- `chrome.debugger.attach()` succeeds (line 362)
-- During the capture loop, the debugger becomes detached
-- `Page.captureScreenshot` command fails
-- Falls back to visible-area-only capture (line 487)
-- The "debugging this browser" info bar may stay visible permanently
+### Permission stance (read this before adding features)
 
-**Root cause hypothesis**:
-- Chrome may auto-detach the debugger when `chrome.scripting.executeScript()` is called on the same tab (lines 415-426 inside the capture loop)
-- The user might dismiss the debugging info bar during capture
-- There may be a race condition between scripting API and debugger API
+The extension requests `activeTab`, `scripting`, `downloads`, `storage`,
+`unlimitedStorage`, `alarms`, `contextMenus` — and **no host permissions at all**.
 
-**What was tried**:
-- Added auto-reattach in `sendDebuggerCommand()` (line 559-571) — didn't fully fix it
-- Moved debugger detach to right after screenshots complete (line 444-448) — bar still persists
-- Added/removed 300ms delay after attachment — caused more detach issues
+v1.0.2 was rejected by Chrome Web Store review for requesting `debugger` and
+`<all_urls>`. Both are gone. **Do not reintroduce them.** In particular:
 
-**Suggested approach**:
-- Consider eliminating `chrome.scripting.executeScript()` during the capture loop entirely
-- Use CDP commands (`Runtime.evaluate`, `Page.captureScreenshot`) for everything while debugger is attached, instead of mixing scripting API + debugger API
-- Alternatively: use `chrome.tabs.captureVisibleTab()` instead of CDP for screenshots (no debugger needed), though it may have quality/timing differences
+- Full-page capture must stay on `chrome.tabs.captureVisibleTab`. The DevTools Protocol
+  (`Page.captureScreenshot`) needs the `debugger` permission, which review rejects when
+  the same result is reachable through the extensions API — and it puts a
+  "this browser is being debugged" bar on the user's screen.
+- The selection overlay must stay an on-demand `scripting` injection. A declarative
+  `content_scripts` entry would mean running code on every page the user visits, which
+  requires host permissions.
 
-### Bug 2: Content appears duplicated (page captured twice)
-**What happens**: On pages with infinite scroll (e.g., Rakuten search results), the lazy loading scroll pass triggers infinite scroll, loading more content and effectively doubling the page height.
+Store-facing copy (single purpose, per-permission justifications, data disclosures) lives
+in [STORE_SUBMISSION.md](STORE_SUBMISSION.md).
 
-**Current mitigation** (partially implemented):
-- Records `initialPageHeight` before lazy loading scroll (line 267-271)
-- Changed from 4-pass scroll to single pass (line 326-335)
-- Caps `pageHeight` at `initialPageHeight * 1.5` (line 382-386)
-
-**Status**: Partially fixed by the cap, but needs testing to confirm.
-
-### Bug 3: Gray gaps between stitched screenshot chunks
-**What happens**: Visible horizontal gray bands appear at regular intervals in the final stitched image.
-
-**Current mitigation** (partially implemented):
-- Added 5% overlap between chunks (line 439-441)
-- Measures viewport AFTER debugger attachment
-
-**Root cause hypothesis**:
-- The debugger info bar reduces `window.innerHeight` but the scroll step uses the pre-bar measurement
-- Fractional DPR or viewport height causes rounding gaps
-- `Math.round(chunk.scrollY * dpr)` may round inconsistently
-
-**Status**: Overlap added but untested due to Bug 1 blocking.
-
-## Architecture of `captureFullPage()` (line 260-493)
+## Module map
 
 ```
-1. Record initial page height                    [line 267-271]
-2. Lazy loading scroll (single pass)             [line 274-359]
-   - Force eager loading on all images
-   - Scroll through page to trigger IntersectionObserver
-   - Wait for images to load
-3. Attach debugger                               [line 362-363]
-4. Measure page dimensions                       [line 366-377]
-5. Cap page height (infinite scroll protection)  [line 382-386]
-6. Hide fixed/sticky elements via CSS injection  [line 391-405]
-7. Scroll-and-stitch capture loop                [line 407-442]
-   - For each chunk: scroll → read scrollY → capture screenshot
-   - Uses overlap between chunks
-8. Detach debugger                               [line 444-448]
-9. Restore hidden elements                       [line 450-460]
-10. Stitch chunks onto OffscreenCanvas           [line 462-474]
-11. Convert to data URL and return               [line 476-480]
+scripts/background.js          Event wiring + capture orchestration only
+scripts/capture/
+  constants.js                 All timing / tuning values
+  page-actions.js              Everything executed inside the page, via chrome.scripting
+  full-page.js                 Scroll-and-stitch pipeline
+  selection.js                 Overlay injection + drag-to-select round trip
+  visible.js                   captureVisibleTab with quota throttling + tab focusing
+  stitch.js                    Chunk placement (pure) + canvas compositing
+scripts/content.js             Selection overlay (classic script — cannot be a module)
+lib/                           Shared by the worker and the pages: bytes, pdf, settings,
+                               i18n, filename
+editor/                        editor.js (controller) + annotations.js + history.js
+docs/privacy-policy.html       Hosted on GitHub Pages; must match manifest permissions
 ```
 
-The debugger is needed ONLY for step 7 (`Page.captureScreenshot`). Steps 2, 4, 6, 9 use `chrome.scripting.executeScript()`. Mixing these two APIs on the same tab during steps 4-7 may cause the detach issue.
-
-## Key Helper Functions
-
-- `sendDebuggerCommand()` (line 559) — wraps CDP commands, has auto-reattach retry
-- `attachDebugger()` / `detachDebugger()` (line 586/598) — Promise wrappers for `chrome.debugger`
-- `base64ToBlob()` / `bytesToBase64()` (line 888/897) — image conversion helpers
-- `captureVisibleTab()` (line 224) — simple fallback using `chrome.tabs.captureVisibleTab`
-
-## File Structure
+### Capture pipeline (`scripts/capture/full-page.js`)
 
 ```
-chrome-screenshot-extension/
-  manifest.json          — MV3 manifest, permissions include "debugger"
-  scripts/
-    background.js        — All capture logic (THIS FILE HAS THE BUGS)
-    content.js           — Selection mode overlay
-    content.css          — Selection mode styles
-  popup/
-    popup.html/js/css    — Extension popup UI
-  editor/
-    editor.html/js/css   — Image editor (opened after capture)
-  options/
-    options.html/js/css  — Settings page
+1. focusTab()               captureVisibleTab only sees the window's ACTIVE tab
+2. measurePageMetrics()     height before priming, for the infinite-scroll guard
+3. primeLazyContent()       one scroll pass; forces eager loading, waits for images
+4. measurePageMetrics()     height, viewport size, DPR after priming
+5. clampPageHeight()        drop growth beyond 1.5x (infinite scroll appended content)
+6. hideFixedElements()      so headers/footers don't repeat in every chunk
+7. captureChunks()          scroll → captureVisibleTab, with overlap between chunks
+8. restoreHiddenElements()  in a finally block
+9. stitchChunks()           OffscreenCanvas composite → PNG data URL
 ```
+
+**`captureVisibleTab` is quota limited** (roughly two calls per second; exceeding it
+returns `MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND`). `visible.js` spaces calls out by
+`CAPTURE_MIN_INTERVAL_MS` (550ms) and retries quota rejections. That interval is the
+dominant cost of a long capture — lower it and captures start failing.
+
+## Changed in 1.1.0 (store rejection fix)
+
+- `debugger` permission and the whole `DebuggerSession` layer removed; capture runs on
+  `chrome.tabs.captureVisibleTab`.
+- `<all_urls>` host permission removed; the extension runs on `activeTab` only.
+- Declarative `content_scripts` removed; the overlay is injected on demand.
+- `web_accessible_resources` removed (the editor is opened by the extension itself).
+- Because captureVisibleTab only captures the active tab, `focusTab()` brings the target
+  tab to the front first — visible in delayed captures if the user switched tabs.
+
+## Fixed in the 1.0.3 refactor
+
+- **Stitch loop could hang forever** on pages that refuse to scroll (scroll-locked body,
+  inner scroll container, page shorter than measured). `captureChunks()` now stops when
+  the scroll position stops advancing, and hard-stops at `MAX_CHUNKS`.
+- **Selection crops were wrong at non-100% browser zoom.** The crop scale is now derived
+  from the captured image width instead of assuming `window.devicePixelRatio`.
+- **Editor bound its UI before the screenshot finished decoding.** `loadImage()` awaits
+  the decode.
+- **Dead code removed**: `saveImage()` / `convertImage()` / `dataURLtoBlob()` (no caller,
+  and `URL.createObjectURL` is unavailable in an MV3 service worker anyway),
+  `waitForNetworkIdle()` (no caller), `showStatus()` in the popup and its markup/CSS.
+- **~110 lines of duplicated PDF-writing code** in `background.js` and `editor.js` are now
+  `lib/pdf.js`.
+
+## Known issues / gaps
+
+1. **The popup's "Save / Copy" checkboxes do nothing.** They are still plumbed through to
+   the editor as `captureOptions.saveDownload` / `saveClipboard`, but the editor ignores
+   them and always waits for an explicit Save or Copy click. Auto-copy cannot work without
+   a user gesture; auto-download would need a deliberate product decision.
+2. **Capturing focuses the target tab.** Unavoidable with `captureVisibleTab`; noticeable
+   only when a delayed capture fires after the user switched tabs.
+3. **Long pages are slower than the old CDP path** because of the capture quota
+   (~0.55s per viewport). A 20-viewport page takes roughly 15 seconds.
+4. **Fixed/sticky elements are hidden for the whole capture**, so a sticky header appears
+   in no chunk at all — not even the first one.
+5. **The infinite-scroll guard is a heuristic.** A page that legitimately grows more than
+   1.5x while lazy content loads will be truncated (`MAX_PAGE_GROWTH_RATIO`).
+6. **Chrome-internal pages cannot be captured** (`chrome://`, the Web Store, other
+   extensions' pages). `activeTab` is not granted there; the capture throws and is logged.
+7. **Automated coverage stops at the capture.** `npm test` covers the pure logic and
+   `npm run test:e2e` drives a real headless Chrome through a full-page capture, but the
+   editor's drawing tools, clipboard copy and the download path are still manual
+   (`E2E_MANUAL_TEST_CHECKLIST.md`).
 
 ## Testing
 
-1. Load unpacked extension from `chrome://extensions`
-2. Navigate to a long page (e.g., Rakuten search results: `search.rakuten.co.jp`)
-3. Click extension icon → "Capture Full Page"
-4. Check `chrome://extensions` → extension errors for debugger errors
-5. Verify: no content duplication, no gaps, debugging bar disappears after capture
+```bash
+npm test          # pure logic
+npm run test:e2e  # real headless Chrome: loads the extension, captures a 3000px fixture,
+                  # and checks the stitched image pixel by pixel
+```
 
-## Environment
+`tests/e2e/` loads the *shipped* manifest to assert the permission set, then loads a
+throwaway copy with `<all_urls>` to exercise the capture (activeTab needs a user gesture
+that CDP cannot produce). If you touch `manifest.json`, `full-page.js`, `stitch.js` or
+`page-actions.js`, run it.
 
-- Chrome (latest stable)
-- macOS
-- Extension loaded as unpacked for development
+Then load the unpacked extension from `chrome://extensions` and walk through
+`E2E_MANUAL_TEST_CHECKLIST.md`. A long page with lazy images and a dropdown menu
+(e.g. a shopping search result page) exercises the tricky paths.
+
+Two things to check specifically after any permission change:
+- the install dialog must not ask to "read your browsing history" or "read data on all sites";
+- no "this browser is being debugged" bar may appear during a capture.

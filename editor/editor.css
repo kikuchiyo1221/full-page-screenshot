@@ -41,6 +41,23 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+}
+
+/* The tools scroll when the window is narrow; Save/Copy/Cancel must never be
+   pushed off the right edge. */
+.toolbar-left {
+  flex: 1 1 auto;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.toolbar-right {
+  flex: 0 0 auto;
+}
+
+.toolbar-left::-webkit-scrollbar {
+  display: none;
 }
 
 .tool-group {
@@ -69,6 +86,9 @@ body {
   font-size: 13px;
   cursor: pointer;
   transition: all 0.15s ease;
+  /* Labels are single words in Japanese; wrapping them splits them mid-word. */
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .tool-btn:hover {
@@ -185,6 +205,8 @@ body {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .action-btn.primary {
@@ -331,4 +353,28 @@ body {
   .tool-divider {
     display: none;
   }
+}
+
+/* Transient toast shown after save / copy actions. */
+.editor-notification {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  border-radius: 8px;
+  background: #059669;
+  color: #fff;
+  font-size: 14px;
+  z-index: 1000;
+  animation: editor-notification-slide-up 0.3s ease;
+}
+
+.editor-notification.error {
+  background: #dc2626;
+}
+
+@keyframes editor-notification-slide-up {
+  from { opacity: 0; transform: translate(-50%, 20px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }

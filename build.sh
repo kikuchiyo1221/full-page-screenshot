@@ -22,10 +22,9 @@ INCLUDE=(
   "icons/icon16.png"
   "icons/icon48.png"
   "icons/icon128.png"
+  "lib"
   "popup"
-  "scripts/background.js"
-  "scripts/content.js"
-  "scripts/content.css"
+  "scripts"
   "editor"
   "options"
 )

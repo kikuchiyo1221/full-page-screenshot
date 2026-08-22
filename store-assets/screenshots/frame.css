@@ -1,0 +1,115 @@
+/* Shared layout for Chrome Web Store screenshots (1280x800) and the promo tile (440x280).
+   Rendered to PNG by render.sh with headless Chrome. */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  width: 1280px;
+  height: 800px;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 45%, #e0f2fe 100%);
+  color: #0f172a;
+  display: flex;
+  flex-direction: column;
+}
+
+.headline {
+  padding: 56px 72px 0;
+  flex: 0 0 auto;
+}
+
+.headline h1 {
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.headline p {
+  margin-top: 14px;
+  font-size: 20px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.headline .accent { color: #2563eb; }
+
+.stage {
+  flex: 1 1 auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 72px 56px;
+}
+
+/* Chrome-like window chrome so the UI reads as "in the browser". */
+.window {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, .18), 0 2px 8px rgba(15, 23, 42, .08);
+  overflow: hidden;
+}
+
+.window-bar {
+  height: 38px;
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+}
+
+.dot { width: 11px; height: 11px; border-radius: 50%; }
+.dot.r { background: #f87171; }
+.dot.y { background: #fbbf24; }
+.dot.g { background: #4ade80; }
+
+.omnibox {
+  flex: 1;
+  height: 22px;
+  margin-left: 10px;
+  border-radius: 11px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  font-size: 11px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #dbeafe;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, .1);
+  font-size: 15px;
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+.caption {
+  position: absolute;
+  bottom: 18px;
+  left: 72px;
+  right: 72px;
+  font-size: 15px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Mock page content used as "the page being captured". */
+.mock-page { background: #fff; }
+.mock-hero { height: 92px; background: linear-gradient(90deg, #1e293b, #334155); }
+.mock-row { display: flex; gap: 10px; padding: 12px 14px; }
+.mock-card { flex: 1; height: 58px; border-radius: 7px; background: #e2e8f0; }
+.mock-line { height: 9px; border-radius: 5px; background: #e2e8f0; margin: 9px 14px; }
+.mock-line.short { width: 45%; }
+.mock-line.mid { width: 72%; }

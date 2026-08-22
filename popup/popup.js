@@ -1,128 +1,73 @@
-// Initialize i18n
-function initI18n() {
-  document.querySelectorAll('[data-i18n]').forEach(elem => {
-    const key = elem.getAttribute('data-i18n');
-    const message = chrome.i18n.getMessage(key);
-    if (message) {
-      elem.textContent = message;
-    }
-  });
+// Popup: choose a capture mode and hand the request to the service worker.
 
-  // Update delay select options
-  const delaySelect = document.getElementById('delay-seconds');
-  delaySelect.querySelectorAll('option').forEach(option => {
-    const seconds = option.value;
-    option.textContent = chrome.i18n.getMessage('delaySeconds', [seconds]) || `${seconds}s`;
-  });
+import { applyI18n, applyI18nToOptions, t } from '../lib/i18n.js';
+import { DEFAULT_SETTINGS, loadSettings } from '../lib/settings.js';
 
-  // Update delay mode select options
-  const delayModeSelect = document.getElementById('delay-mode');
-  delayModeSelect.querySelectorAll('option').forEach(option => {
-    const key = option.getAttribute('data-i18n-value');
-    if (key) {
-      const message = chrome.i18n.getMessage(key);
-      if (message) {
-        option.textContent = message;
-      }
-    }
+/** Give the message a moment to reach the worker before the popup tears down. */
+const CLOSE_DELAY_MS = 50;
+
+function localize() {
+  applyI18n();
+
+  document.querySelectorAll('#delay-seconds option').forEach((option) => {
+    option.textContent = t('delaySeconds', [option.value]) || `${option.value}s`;
   });
+  applyI18nToOptions(document.getElementById('delay-mode'));
 }
 
-// Load saved settings
-async function loadSettings() {
-  const settings = await chrome.storage.sync.get({
-    defaultFormat: 'png',
-    defaultSaveDownload: true,
-    defaultSaveClipboard: false
-  });
+async function restoreDefaults() {
+  const settings = await loadSettings();
 
-  // Apply format
   const formatRadio = document.querySelector(`input[name="format"][value="${settings.defaultFormat}"]`);
-  if (formatRadio) {
-    formatRadio.checked = true;
-  }
+  if (formatRadio) formatRadio.checked = true;
 
-  // Apply save options
   document.getElementById('save-download').checked = settings.defaultSaveDownload;
   document.getElementById('save-clipboard').checked = settings.defaultSaveClipboard;
 }
 
-// Show status message
-function showStatus(message, type = 'info') {
-  const statusEl = document.getElementById('status-message');
-  statusEl.textContent = message;
-  statusEl.className = `status-message ${type}`;
-
-  if (type === 'success' || type === 'error') {
-    setTimeout(() => {
-      statusEl.classList.add('hidden');
-    }, 3000);
-  }
-}
-
-// Get capture options
-function getCaptureOptions() {
-  const format = document.querySelector('input[name="format"]:checked').value;
-  const saveDownload = document.getElementById('save-download').checked;
-  const saveClipboard = document.getElementById('save-clipboard').checked;
-  const delaySeconds = parseInt(document.getElementById('delay-seconds').value);
-
+function readCaptureOptions() {
   return {
-    format,
-    saveDownload,
-    saveClipboard,
-    delaySeconds
+    format: document.querySelector('input[name="format"]:checked')?.value
+      || DEFAULT_SETTINGS.defaultFormat,
+    saveDownload: document.getElementById('save-download').checked,
+    saveClipboard: document.getElementById('save-clipboard').checked,
+    delaySeconds: parseInt(document.getElementById('delay-seconds').value, 10)
   };
 }
 
-// Send capture command to background script
-async function sendCaptureCommand(mode, options = {}) {
-  const captureOptions = {
-    ...getCaptureOptions(),
-    ...options,
-    mode
-  };
-
-  // Send message and wait for acknowledgment before closing
-  // This prevents race condition where popup closes before message is sent
+async function requestCapture(mode, extraOptions = {}) {
   try {
     await chrome.runtime.sendMessage({
       action: 'capture',
-      options: captureOptions
+      options: { ...readCaptureOptions(), ...extraOptions, mode }
     });
-  } catch (e) {
-    // Ignore errors - capture will proceed in background
+  } catch (error) {
+    // The capture continues in the background even if the popup loses the port.
+    console.warn('Capture request failed:', error);
   }
 
-  // Small delay to ensure message is fully processed
-  setTimeout(() => window.close(), 50);
+  setTimeout(() => window.close(), CLOSE_DELAY_MS);
 }
 
-// Event Listeners
 document.addEventListener('DOMContentLoaded', async () => {
-  initI18n();
-  await loadSettings();
+  localize();
+  await restoreDefaults();
 
-  // Full page capture
-  document.getElementById('btn-full-page').addEventListener('click', () => {
-    sendCaptureCommand('fullPage');
-  });
+  document.getElementById('btn-full-page')
+    .addEventListener('click', () => requestCapture('fullPage'));
 
-  // Selection capture
-  document.getElementById('btn-selection').addEventListener('click', () => {
-    sendCaptureCommand('selection');
-  });
+  document.getElementById('btn-selection')
+    .addEventListener('click', () => requestCapture('selection'));
 
-  // Delayed capture
   document.getElementById('btn-delay').addEventListener('click', () => {
-    const delaySeconds = parseInt(document.getElementById('delay-seconds').value);
-    const delayMode = document.getElementById('delay-mode').value;
-    sendCaptureCommand('delay', { delaySeconds, delayMode });
+    requestCapture('delay', {
+      delaySeconds: parseInt(document.getElementById('delay-seconds').value, 10),
+      delayMode: document.getElementById('delay-mode').value
+    });
   });
 
-  // Open settings
-  document.getElementById('open-settings').addEventListener('click', (e) => {
-    e.preventDefault();
+  document.getElementById('open-settings').addEventListener('click', (event) => {
+    event.preventDefault();
     chrome.runtime.openOptionsPage();
   });
 });
