@@ -27,8 +27,15 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Downloads must land inside the throwaway profile, never in the user's ~/Downloads.
+mkdir -p "$WORK/profile/Default" "$WORK/downloads"
+cat > "$WORK/profile/Default/Preferences" <<JSON
+{"download":{"default_directory":"$WORK/downloads","prompt_for_download":false},"savefile":{"default_directory":"$WORK/downloads"}}
+JSON
+
 "$CHROME" --headless=new --disable-gpu --no-first-run --no-default-browser-check \
-  --user-data-dir="$WORK/profile" --remote-debugging-port="$PORT" about:blank \
+  --user-data-dir="$WORK/profile" --remote-debugging-port="$PORT" \
+  --window-size=1440,900 about:blank \
   > "$WORK/chrome.log" 2>&1 &
 CHROME_PID=$!
 

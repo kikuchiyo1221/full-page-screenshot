@@ -205,9 +205,12 @@ explicitly ask it to capture.
 - [x] スクリーンショット 1280x800 ×5枚・プロモタイル 440x280 を生成済み
       → `store-assets/screenshots/out/`（再生成は `store-assets/screenshots/render.sh`）
 - [x] `./build.sh` の ZIP に `package.json` / `tests/` / `store-assets/` / `docs/` が入らないことを確認
-- [ ] `chrome://extensions` に未パッケージで読み込み、`E2E_MANUAL_TEST_CHECKLIST.md` を一周
-      （エディタの描画・クリップボード・ダウンロードは自動化対象外）
-- [ ] 読み込み時に **権限ダイアログが「閲覧履歴の読み取り」等を要求していない**ことを目視確認
+- [x] Chrome が表示する権限文言を確認済み。表示されるのは **"Manage your downloads" のみ**で、
+      "Read and change all your data on all websites" も "Read your browsing history" も**出ない**
+      （`test:e2e` が `chrome://extensions` の実際の表示から自動判定）
+- [x] `chrome.debugger` API が拡張から見えないことを確認済み＝デバッグバーは原理的に出ない
+- [x] エディタの描画・Undo/Redo・PNG/JPEG/PDF 書き出しを自動検証済み
+- [ ] `E2E_MANUAL_TEST_CHECKLIST.md` の残り（範囲選択・遅延キャプチャ・JPEG品質比較）を手動で一周
 - [ ] `./build.sh` で ZIP を生成してアップロード
 - [x] GitHub Pages のプライバシーポリシーURLが公開済み（HTTP 200 確認済み）
 - [ ] 上記 §2〜§4 の英文を各欄に貼付

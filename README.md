@@ -62,9 +62,14 @@ npm run test:e2e  # ヘッドレスChromeで拡張を実際に読み込み、フ
 ./build.sh        # Chrome Web Store 提出用の ZIP を生成
 ```
 
-`npm run test:e2e` は実Chromeに拡張をロードして、manifestの権限・全ページの読み込み・
-Service Worker の起動を確認したあと、3000pxのテストページを実際にキャプチャして
-**継ぎ目のズレ・欠け・重複がないか**をピクセル単位で検証します。
+`npm run test:e2e` は実Chromeに拡張をロードして28項目を検証します：
+
+- manifest の権限セットと、**Chrome が実際にユーザーへ表示する権限文言**（`chrome://extensions` の
+  シャドウDOMから読み取り）
+- ポップアップ／設定／エディタ各ページの描画とコンソールエラー、Service Worker の起動
+- 3000px のテストページを実際にキャプチャし、**継ぎ目のズレ・欠け・重複**をピクセル単位で判定
+- エディタに合成入力を送って描画・Undo・Redo、PNG / JPEG / PDF の書き出し（ファイル署名と
+  ファイル名まで確認）
 
 残りの手動確認手順は [E2E_MANUAL_TEST_CHECKLIST.md](E2E_MANUAL_TEST_CHECKLIST.md) を参照してください。
 アーキテクチャと既知の課題は [HANDOFF.md](HANDOFF.md) にまとめています。

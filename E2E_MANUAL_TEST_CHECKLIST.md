@@ -1,5 +1,14 @@
 # Chrome Screenshot Extension E2E Manual Checklist
 
+> **Run `npm run test:e2e` first.** It drives a real headless Chrome and already covers:
+> the permission warnings Chrome shows the user (§11), full-page capture correctness
+> including stitch alignment (§1), the editor's tools and undo/redo, and PNG / JPEG / PDF
+> export with the configured filename (§7).
+>
+> Still manual, because they need a real user gesture or a human eye:
+> selection capture (§2-4, §9), delayed capture (§5, §6), JPEG quality comparison (§8),
+> clipboard paste into another app, and the overall regression sweep (§10).
+
 ## 0. Pre-check
 1. Open `chrome://extensions/`.
 2. Enable Developer mode.
@@ -138,23 +147,7 @@ Expected:
 
 ---
 
-## Result Template
-Use this table while testing:
-
-| Case | Result (PASS/FAIL) | Notes | Screenshot/Video |
-|---|---|---|---|
-| 1 |  |  |  |
-| 2 |  |  |  |
-| 3 |  |  |  |
-| 4 |  |  |  |
-| 5 |  |  |  |
-| 6 |  |  |  |
-| 7 |  |  |  |
-| 8 |  |  |  |
-| 9 |  |  |  |
-| 10 |  |  |  |
-
-## 10. Permissions (Chrome Web Store review blockers)
+## 11. Permissions (Chrome Web Store review blockers)
 
 Most of this section is automated — `npm run test:e2e` asserts the permission set and the
 stitched output against a real headless Chrome. Run the manual steps below as well after
@@ -178,3 +171,19 @@ Pass criteria:
 Fail if:
 - Any host permission or the debugger permission is present.
 - The debugging info bar appears (it also shifts the viewport and breaks stitching).
+
+## Result Template
+Use this table while testing:
+
+| Case | Result (PASS/FAIL) | Notes | Screenshot/Video |
+|---|---|---|---|
+| 1 |  |  |  |
+| 2 |  |  |  |
+| 3 |  |  |  |
+| 4 |  |  |  |
+| 5 |  |  |  |
+| 6 |  |  |  |
+| 7 |  |  |  |
+| 8 |  |  |  |
+| 9 |  |  |  |
+| 10 |  |  |  |

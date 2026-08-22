@@ -106,10 +106,10 @@ dominant cost of a long capture — lower it and captures start failing.
    1.5x while lazy content loads will be truncated (`MAX_PAGE_GROWTH_RATIO`).
 6. **Chrome-internal pages cannot be captured** (`chrome://`, the Web Store, other
    extensions' pages). `activeTab` is not granted there; the capture throws and is logged.
-7. **Automated coverage stops at the capture.** `npm test` covers the pure logic and
-   `npm run test:e2e` drives a real headless Chrome through a full-page capture, but the
-   editor's drawing tools, clipboard copy and the download path are still manual
-   (`E2E_MANUAL_TEST_CHECKLIST.md`).
+7. **Selection and delayed capture are not automated.** Both need a real user gesture
+   (activeTab), which CDP cannot produce. `npm run test:e2e` covers the permission
+   warnings, full-page capture, the editor's tools and every export format; the rest is
+   in `E2E_MANUAL_TEST_CHECKLIST.md`.
 
 ## Testing
 
@@ -119,10 +119,20 @@ npm run test:e2e  # real headless Chrome: loads the extension, captures a 3000px
                   # and checks the stitched image pixel by pixel
 ```
 
-`tests/e2e/` loads the *shipped* manifest to assert the permission set, then loads a
-throwaway copy with `<all_urls>` to exercise the capture (activeTab needs a user gesture
-that CDP cannot produce). If you touch `manifest.json`, `full-page.js`, `stitch.js` or
-`page-actions.js`, run it.
+`tests/e2e/` runs three phases against a real headless Chrome:
+
+1. loads the *shipped* build and asserts the manifest, every extension page, the service
+   worker, and — read out of `chrome://extensions`' shadow DOM — the permission warnings
+   Chrome actually shows the user;
+2. loads a throwaway copy with `<all_urls>` and captures a 3000px fixture, checking the
+   stitched PNG pixel by pixel (activeTab needs a user gesture CDP cannot produce, so the
+   test build stands in for one; the shipped manifest is never modified);
+3. drives the editor with synthetic input — draw, undo, redo — and exports PNG, JPEG and
+   PDF, checking each file's signature and filename.
+
+Downloads land in the throwaway profile, never in the user's Downloads folder.
+If you touch `manifest.json`, `full-page.js`, `stitch.js`, `page-actions.js` or the
+editor, run it.
 
 Then load the unpacked extension from `chrome://extensions` and walk through
 `E2E_MANUAL_TEST_CHECKLIST.md`. A long page with lazy images and a dropdown menu
