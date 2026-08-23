@@ -1,6 +1,6 @@
 {
   "name": "full-page-screenshot",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Chrome extension for capturing, annotating and exporting full-page screenshots",
   "private": true,
   "type": "module",

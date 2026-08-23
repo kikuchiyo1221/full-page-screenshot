@@ -156,5 +156,13 @@
   "msgSelectArea": {
     "message": "Drag to select the area to capture",
     "description": "Instruction to select capture area"
+  },
+  "errBadgeTitle": {
+    "message": "Capture failed",
+    "description": "Tooltip prefix when a capture fails"
+  },
+  "errRestrictedPage": {
+    "message": "This page cannot be captured. Extensions cannot run on chrome:// pages or the Chrome Web Store. Try a regular web page.",
+    "description": "Capture attempted on a page extensions cannot access"
   }
 }

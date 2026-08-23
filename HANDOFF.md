@@ -14,8 +14,9 @@ the screenshots together.
 The extension requests `activeTab`, `scripting`, `downloads`, `storage`,
 `unlimitedStorage`, `alarms`, `contextMenus` — and **no host permissions at all**.
 
-v1.0.2 was rejected by Chrome Web Store review for requesting `debugger` and
-`<all_urls>`. Both are gone. **Do not reintroduce them.** In particular:
+v1.0.2 shipped with `debugger` and `<all_urls>`; both are gone as of 1.1.1.
+**Do not reintroduce them.** They passed review once, but the store's permission
+policy tightens over time and both are avoidable here. In particular:
 
 - Full-page capture must stay on `chrome.tabs.captureVisibleTab`. The DevTools Protocol
   (`Page.captureScreenshot`) needs the `debugger` permission, which review rejects when
@@ -65,7 +66,7 @@ returns `MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND`). `visible.js` spaces calls o
 `CAPTURE_MIN_INTERVAL_MS` (550ms) and retries quota rejections. That interval is the
 dominant cost of a long capture — lower it and captures start failing.
 
-## Changed in 1.1.0 (store rejection fix)
+## Changed in 1.1.1 (permission reduction)
 
 - `debugger` permission and the whole `DebuggerSession` layer removed; capture runs on
   `chrome.tabs.captureVisibleTab`.
@@ -74,6 +75,9 @@ dominant cost of a long capture — lower it and captures start failing.
 - `web_accessible_resources` removed (the editor is opened by the extension itself).
 - Because captureVisibleTab only captures the active tab, `focusTab()` brings the target
   tab to the front first — visible in delayed captures if the user switched tabs.
+- A capture that fails after the popup has closed had no way to say so. Failures now mark
+  the toolbar icon with a badge and explain themselves in its tooltip; pages no extension
+  can touch (`chrome://`, the Web Store) get a specific message rather than a raw API error.
 
 ## Fixed in the 1.0.3 refactor
 

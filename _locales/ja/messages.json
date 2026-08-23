@@ -156,5 +156,13 @@
   "msgSelectArea": {
     "message": "キャプチャする範囲をドラッグして選択してください",
     "description": "Instruction to select capture area"
+  },
+  "errBadgeTitle": {
+    "message": "撮影できませんでした",
+    "description": "Tooltip prefix when a capture fails"
+  },
+  "errRestrictedPage": {
+    "message": "このページでは撮影できません。chrome:// や Chrome ウェブストアなど、拡張機能が動作できないページです。通常のWebページで試してください。",
+    "description": "Capture attempted on a page extensions cannot access"
   }
 }

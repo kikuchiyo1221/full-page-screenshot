@@ -108,8 +108,9 @@ All data is processed locally and never sent to external servers.
 
 ## 審査に通るために
 
-> **重要**: v1.0.2 は `debugger` 権限と `<all_urls>` の権限過剰で却下された。
-> 「説明を書けば通る」種類の指摘ではないため、v1.1.0 で両方を実装ごと削除した。
+> **重要**: v1.0.2 は `debugger` 権限と `<all_urls>` を要求したまま公開されている。
+> 審査は通ったが、どちらもこの拡張には不要で、ストアの権限ポリシーは年々厳しくなる。
+> v1.1.1 で両方を実装ごと削除した。
 > 再申請に必要な文面・チェックリストは **[STORE_SUBMISSION.md](STORE_SUBMISSION.md)** に
 > まとめてあるので、そちらを使うこと。
 

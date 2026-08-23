@@ -1,14 +1,14 @@
-# Chrome Web Store 再申請パック
+# Chrome Web Store 更新パック
 
-v1.0.2 は **権限過剰（`debugger` + `<all_urls>`）** で審査に通らなかった。
-v1.1.0 でその両方を削除済み。このファイルの英文は Developer Dashboard の各欄に
-**そのまま貼れる**形式で書いてある。
+公開中の v1.0.2 は `debugger` と `<all_urls>` を要求したまま審査を通っている。
+どちらもこの拡張には不要なので、v1.1.1 で両方を実装ごと削除した。
+このファイルの英文は Developer Dashboard の各欄に **そのまま貼れる**形式で書いてある。
 
 ---
 
-## 1. 何が変わったか（v1.0.2 → v1.1.0）
+## 1. 何が変わったか（v1.0.2 → v1.1.1）
 
-| 項目 | v1.0.2（却下） | v1.1.0（再申請） |
+| 項目 | v1.0.2（公開中） | v1.1.1（更新） |
 |---|---|---|
 | `debugger` 権限 | **要求していた** | 削除。DevTools Protocol を一切使わない |
 | `host_permissions` | `<all_urls>` | **なし**。`activeTab` のみ |
@@ -16,11 +16,11 @@ v1.1.0 でその両方を削除済み。このファイルの英文は Developer
 | フルページ撮影の実装 | `Page.captureScreenshot`（CDP） | `chrome.tabs.captureVisibleTab` + スクロール |
 | `web_accessible_resources` | editor/* を全URLに公開 | 削除 |
 
-`debugger` を消したのは説明で押し切れる指摘ではないため。Chrome Web Store の
-Use of Permissions ポリシーは「機能実現に必要な最小限の権限のみ」を求めており、
-フルページ撮影は `captureVisibleTab` で実現できる＝代替手段が存在する以上、
-`debugger` の要求は正当化できない。副作用として「このブラウザはデバッグされています」
-バーも出なくなる。
+`debugger` を消した理由。Chrome Web Store の Use of Permissions ポリシーは
+「機能実現に必要な最小限の権限のみ」を求めており、フルページ撮影は
+`captureVisibleTab` で実現できる＝代替手段が存在する以上、`debugger` の要求は
+将来の更新審査で正当化しづらい。副作用として「このブラウザはデバッグされています」
+バーも出なくなり、そのバーがビューポートを縮めて起きていた継ぎ目のズレも消えた。
 
 ---
 
@@ -198,7 +198,7 @@ explicitly ask it to capture.
 
 ---
 
-## 7. 再申請前チェックリスト
+## 7. 提出前チェックリスト
 
 - [x] `npm test`（ユニット）と `npm run test:e2e`（実Chrome）が全パス
 - [x] 権限セットが期待どおり（`test:e2e` が manifest を実Chromeで直接検証）

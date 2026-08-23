@@ -144,7 +144,7 @@ async function serviceWorkerSession(extensionId) {
 
 /* ---------------------------------------------- phase 1: the shipped build -- */
 
-console.log('\n[1/3] shipped extension');
+console.log('\n[1/4] shipped extension');
 const { id: shippedId } = await send('Extensions.loadUnpacked', { path: EXT_ROOT });
 
 for (const [name, path, probe] of [
@@ -211,7 +211,7 @@ if (swSession) {
 
 /* ----------------------------------------- phase 2: real capture behaviour -- */
 
-console.log('\n[2/3] full-page capture against a 3000px fixture');
+console.log('\n[2/4] full-page capture against a 3000px fixture');
 const testBuild = join(WORK_DIR, 'ext-with-host-permissions');
 await mkdir(testBuild, { recursive: true });
 await cp(EXT_ROOT, testBuild, {
@@ -277,9 +277,113 @@ if (report.error) {
     : `seam ${badSeam + 1} reads ${report.samples.seams[badSeam].join(' / ')} — stitch drift`);
 }
 
-/* ------------------------------------- phase 3: the editor, driven by input -- */
+/* ------------------------------------------- phase 3: selection capture ----- */
+// The overlay is injected on demand now that the manifest declares no content
+// scripts, so this exercises injection -> drag -> crop -> handoff end to end.
 
-console.log('\n[3/3] editor: drawing, undo/redo and export');
+console.log('\n[3/4] selection capture (on-demand overlay injection)');
+{
+  const SELECTION_URL = FIXTURE_URL.replace('tall.html', 'plain.html');
+  const target = await send('Target.createTarget', { url: SELECTION_URL });
+  const pageSession = (await send('Target.attachToTarget', { targetId: target.targetId, flatten: true })).sessionId;
+  await send('Runtime.enable', {}, pageSession);
+  await send('Log.enable', {}, pageSession);
+  await sleep(1000);
+
+  const driver = await openPage(`chrome-extension://${testId}/options/options.html`);
+  await send('Target.activateTarget', { targetId: target.targetId });
+  await sleep(400);
+  await evaluate(driver.sessionId, `chrome.storage.local.remove('pendingImage')`);
+
+  // Fire without awaiting: the capture only settles once the drag finishes.
+  await send('Runtime.evaluate', {
+    expression: `window.__capture = chrome.runtime.sendMessage({ action: 'capture', options: { mode: 'selection' } }); 1`,
+    returnByValue: true
+  }, driver.sessionId);
+  await sleep(2500);
+
+  const overlay = await evaluate(pageSession, `(() => {
+    const element = document.getElementById('screenshot-selection-overlay');
+    if (!element) return { present: false };
+    const style = getComputedStyle(element);
+    return {
+      present: true,
+      styled: style.position === 'fixed' && style.cursor === 'crosshair',
+      boxes: element.querySelectorAll('.screenshot-selection-box').length
+    };
+  })()`);
+
+  note(overlay.present, 'the overlay is injected into the page');
+  note(overlay.styled === true, 'content.css was injected with it');
+  note(overlay.boxes === 1, 'the selection box exists');
+
+  if (overlay.present) {
+    const drawFrom = [150, 150];
+    const drawTo = [600, 450];
+    const point = (type, [x, y], buttons) =>
+      send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1, buttons }, pageSession);
+
+    await point('mousePressed', drawFrom, 1);
+    for (let step = 1; step <= 5; step += 1) {
+      await point('mouseMoved', [
+        drawFrom[0] + ((drawTo[0] - drawFrom[0]) * step) / 5,
+        drawFrom[1] + ((drawTo[1] - drawFrom[1]) * step) / 5
+      ], 1);
+    }
+    await point('mouseReleased', drawTo, 0);
+
+    const outcome = await evaluate(driver.sessionId, `Promise.race([
+      window.__capture,
+      new Promise(r => setTimeout(() => r({ timedOut: true }), 30000))
+    ])`);
+    note(outcome?.success === true, `selection capture completed (${JSON.stringify(outcome)})`);
+
+    const cropped = await evaluate(driver.sessionId, `(async () => {
+      const { pendingImage } = await chrome.storage.local.get('pendingImage');
+      if (!pendingImage) return { image: false };
+      const bitmap = await createImageBitmap(await (await fetch(pendingImage)).blob());
+      return { image: true, width: bitmap.width, height: bitmap.height };
+    })()`);
+
+    note(cropped.image === true, 'a cropped image reached the editor');
+    if (cropped.image) {
+      // The selection box border adds a couple of pixels on each side.
+      const closeEnough = Math.abs(cropped.width - 450) <= 8 && Math.abs(cropped.height - 300) <= 8;
+      note(closeEnough, `crop matches the dragged region (${cropped.width}x${cropped.height}, dragged 450x300)`);
+    }
+  }
+
+  await send('Target.closeTarget', { targetId: target.targetId });
+}
+
+// A capture that fails after the popup has closed must still tell the user
+// something. chrome:// pages are unscriptable for every extension, so this is a
+// reliable way to provoke the failure path.
+{
+  const restricted = await send('Target.createTarget', { url: 'chrome://version' });
+  await sleep(800);
+
+  // Open the driver FIRST: creating a target makes it active, which would make
+  // the extension capture the driver page instead of the restricted one.
+  const driver = await openPage(`chrome-extension://${testId}/options/options.html`);
+  await send('Target.activateTarget', { targetId: restricted.targetId });
+  await sleep(500);
+
+  await evaluate(driver.sessionId, `chrome.runtime.sendMessage({ action: 'capture', options: { mode: 'fullPage' } }).catch(() => null)`);
+  await sleep(1200);
+
+  const badge = await evaluate(driver.sessionId, `chrome.action.getBadgeText({})`);
+  const title = await evaluate(driver.sessionId, `chrome.action.getTitle({})`);
+
+  note(badge === '!', `a failed capture marks the toolbar icon (badge: ${JSON.stringify(badge)})`);
+  note(/cannot be captured/i.test(title), `the tooltip explains why (${JSON.stringify(title)})`);
+
+  await send('Target.closeTarget', { targetId: restricted.targetId });
+}
+
+/* ------------------------------------- phase 4: the editor, driven by input -- */
+
+console.log('\n[4/4] editor: drawing, undo/redo and export');
 
 const DOWNLOAD_DIR = join(WORK_DIR, 'downloads');
 await mkdir(DOWNLOAD_DIR, { recursive: true });

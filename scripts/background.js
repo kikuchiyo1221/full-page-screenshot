@@ -10,6 +10,24 @@ import { primeVisibleContent } from './capture/page-actions.js';
 const DELAYED_CAPTURE_ALARM = 'delayed-capture';
 const DELAYED_CAPTURE_KEY = 'delayedCaptureData';
 
+const ERROR_BADGE = '!';
+const ERROR_BADGE_COLOR = '#dc2626';
+
+/**
+ * Chrome's own wording for "this extension has no access here" — chrome:// pages,
+ * the Web Store, other extensions' pages. The sentence differs between the
+ * scripting, tabs and captureVisibleTab APIs, and a page the extension may not
+ * touch reports it as an ungranted activeTab, so all of them are matched.
+ */
+const RESTRICTED_PAGE_PATTERN = new RegExp([
+  "'activeTab' permission is not in effect",
+  'cannot be scripted',
+  'cannot access',
+  'extension manifest must request permission',
+  'chrome://',
+  'chrome-extension://'
+].join('|'), 'i');
+
 const CONTEXT_MENU_ITEMS = [
   { id: 'capture-full-page', messageKey: 'contextMenuFullPage', fallback: 'Capture Full Page' },
   { id: 'capture-selection', messageKey: 'contextMenuSelection', fallback: 'Capture Selection' }
@@ -93,6 +111,25 @@ function reportError(error) {
   console.error('Capture error:', error);
 }
 
+/** A capture that fails after the popup has closed has nowhere to show itself,
+ *  so surface it on the toolbar icon instead. */
+function showCaptureError(error) {
+  const detail = error?.message || String(error);
+  const explanation = RESTRICTED_PAGE_PATTERN.test(detail)
+    ? chrome.i18n.getMessage('errRestrictedPage')
+    : detail;
+
+  console.error('Capture failed:', error);
+  chrome.action.setBadgeText({ text: ERROR_BADGE });
+  chrome.action.setBadgeBackgroundColor({ color: ERROR_BADGE_COLOR });
+  chrome.action.setTitle({ title: `${chrome.i18n.getMessage('errBadgeTitle')}\n${explanation}` });
+}
+
+function clearCaptureError() {
+  chrome.action.setBadgeText({ text: '' });
+  chrome.action.setTitle({ title: chrome.i18n.getMessage('extName') });
+}
+
 async function captureActiveTab(options) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab) throw new Error('No active tab found');
@@ -146,6 +183,7 @@ async function executeCapture(tab, captureOptions) {
     return { success: false, error: 'Capture in progress' };
   }
   captureInProgress = true;
+  clearCaptureError();
 
   try {
     const imageData = await captureImage(tab, captureOptions);
@@ -155,6 +193,9 @@ async function executeCapture(tab, captureOptions) {
 
     await openEditor(tab, imageData, captureOptions);
     return { success: true };
+  } catch (error) {
+    showCaptureError(error);
+    throw error;
   } finally {
     captureInProgress = false;
   }
